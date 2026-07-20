@@ -41,3 +41,4 @@ docker-compose.local.yml
 *.local.yml
 j.txt
 *.cookie
+backups/
