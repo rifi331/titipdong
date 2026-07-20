@@ -17,6 +17,7 @@ import (
 	"github.com/titipdong/titipdong/internal/customers"
 	"github.com/titipdong/titipdong/internal/kyc"
 	"github.com/titipdong/titipdong/internal/orders"
+	"github.com/titipdong/titipdong/internal/requests"
 	"github.com/titipdong/titipdong/internal/scan"
 	"github.com/titipdong/titipdong/internal/trips"
 )
@@ -32,6 +33,7 @@ type Server struct {
 	orders    *orders.Store
 	catalog   *catalog.Store
 	kyc       *kyc.Store
+	requests  *requests.Store
 	currency  *currency.Service
 	scan      *scan.Service
 }
@@ -54,6 +56,7 @@ func New(cfg config.Config, pool *pgxpool.Pool) *Server {
 		orders:    orders.NewStore(pool),
 		catalog:   catalog.NewStore(pool),
 		kyc:       kyc.NewStore(pool),
+		requests:  requests.NewStore(pool),
 		currency:  currency.New(pool, cfg.FXBaseURL),
 		scan:      scan.New(cfg.OpenAIAPIKey),
 	}
@@ -72,18 +75,21 @@ func (s *Server) Handler() http.Handler {
 	r.Get("/manifest.json", s.handleManifest())
 	r.Get("/sw.js", s.handleServiceWorker())
 
-	// Public routes.
-	r.Get("/", s.handleHome)
-	r.Get("/login", s.handleLoginGet)
-	r.Post("/login", s.handleLoginPost)
-	r.Get("/signup", s.handleSignupGet)
-	r.Post("/signup", s.handleSignupPost)
-	r.Post("/logout", s.handleLogout)
-	r.Get("/catalog", s.handleCatalogPublic)
-	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("ok"))
-	})
+		// Public routes.
+		r.Get("/", s.handleHome)
+		r.Get("/login", s.handleLoginGet)
+		r.Post("/login", s.handleLoginPost)
+		r.Get("/signup", s.handleSignupGet)
+		r.Post("/signup", s.handleSignupPost)
+		r.Post("/logout", s.handleLogout)
+		r.Get("/catalog", s.handleCatalogPublic)
+		r.Get("/catalog/{id}/request", s.handleRequestForm)
+		r.Post("/catalog/{id}/request", s.handleRequestSubmit)
+		r.Get("/catalog/thanks", s.handleRequestThanks)
+		r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("ok"))
+		})
 
 	// Authenticated area.
 	r.Group(func(r chi.Router) {
@@ -135,6 +141,12 @@ func (s *Server) Handler() http.Handler {
 
 			// Summary.
 			r.Get("/app/summary", s.handleSummary)
+
+			// Buyer requests (anonymous catalog requests awaiting review).
+			r.Get("/app/requests", s.handleRequestsList)
+			r.Post("/app/requests/{id}/accept", s.handleRequestAccept)
+			r.Post("/app/requests/{id}/reject", s.handleRequestReject)
+			r.Get("/app/requests/{id}/wa", s.handleRequestWA)
 
 			// Uploads (item/receipt/KTP photos).
 			r.Get("/uploads/{name}", s.handleUpload)

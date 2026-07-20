@@ -1,17 +1,31 @@
 {{define "title"}}Katalog Jastip — TitipDong{{end}}
 {{define "content"}}
-<h1 class="text-2xl font-bold mb-4">Katalog Jastip 🛒</h1>
-{{if .items}}
-<div class="grid grid-cols-2 gap-3">
-  {{range .items}}
-  <div class="bg-white rounded-xl overflow-hidden shadow-sm border border-slate-100">
-    {{if .PhotoPath}}<img src="/uploads/{{.PhotoPath}}" class="w-full h-32 object-cover">{{else}}<div class="w-full h-32 bg-slate-100 flex items-center justify-center text-3xl">🛍️</div>{{end}}
-    <div class="p-2">
-      <div class="font-medium text-sm truncate">{{.Title}}</div>
-      <div class="text-xs text-slate-500">{{.JastiperName}} · {{currencySym .Currency}}{{printf "%.0f" .EstPriceForeign}}</div>
+<div class="max-w-md mx-auto">
+  <h1 class="text-2xl font-bold mb-1">Katalog Jastip 🛒</h1>
+  <p class="text-sm text-slate-600 mb-4">Mau sesuatu? Tap <b>"Mau Ini!"</b> — gak perlu bikin akun, langsung connect ke jastiper via WhatsApp.</p>
+
+  {{if .items}}
+  <div class="grid grid-cols-1 gap-3">
+    {{range .items}}
+    <div class="bg-white rounded-xl overflow-hidden shadow-sm border border-slate-100">
+      <div class="flex">
+        {{if .PhotoPath}}<img src="/uploads/{{.PhotoPath}}" class="w-28 h-28 object-cover shrink-0">{{else}}<div class="w-28 h-28 bg-slate-100 flex items-center justify-center text-3xl shrink-0">🛍️</div>{{end}}
+        <div class="p-3 flex-1 min-w-0">
+          <div class="font-semibold truncate">{{.Title}}</div>
+          {{if .Description}}<div class="text-xs text-slate-500 mt-1 line-clamp-2">{{.Description}}</div>{{end}}
+          <div class="text-xs text-slate-500 mt-1">{{.JastiperName}} · {{currencySym .Currency}}{{printf "%.0f" .EstPriceForeign}}</div>
+        </div>
+      </div>
+      <a href="/catalog/{{.ID}}/request" class="block bg-sky-500 hover:bg-sky-600 text-white text-center text-sm font-semibold py-2.5">
+        ✨ Mau Ini!
+      </a>
     </div>
+    {{end}}
+  </div>
+  {{else}}
+  <div class="bg-white rounded-xl p-6 text-center text-slate-500 text-sm">
+    Belum ada item di katalog. Coba lagi nanti ya!
   </div>
   {{end}}
 </div>
-{{else}}<p class="text-sm text-slate-500">Belum ada item. Yuk <a href="/signup" class="text-sky-600 underline">daftar jadi Jastiper</a>!</p>{{end}}
 {{end}}

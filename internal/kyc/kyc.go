@@ -171,3 +171,17 @@ func (s *Store) Decide(ctx context.Context, appID, reviewerID int64, approve boo
 	}
 	return tx.Commit(ctx)
 }
+
+// PhoneForUser returns the jastiper's phone from their most recent approved
+// application. Returns "" if none (e.g. admin-created jastiper without KYC).
+func (s *Store) PhoneForUser(ctx context.Context, userID int64) string {
+	var phone string
+	err := s.pool.QueryRow(ctx, `
+		SELECT phone FROM jastiper_applications
+		WHERE user_id = $1 AND status = 'approved'
+		ORDER BY created_at DESC LIMIT 1`, userID).Scan(&phone)
+	if err != nil {
+		return ""
+	}
+	return phone
+}

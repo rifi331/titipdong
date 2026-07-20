@@ -1,0 +1,26 @@
+{{define "title"}}Request Buyer — TitipDong{{end}}
+{{define "content"}}
+<h1 class="text-2xl font-bold mb-4">Request Buyer 📨</h1>
+
+{{if .pending}}
+<h2 class="font-semibold mb-2 text-amber-700">Menunggu ({{len .pending}})</h2>
+<div id="request-list" class="space-y-2 mb-6">
+  {{range .pending}}
+    {{template "request_card" dict "r" .}}
+  {{end}}
+</div>
+{{else}}
+<div class="bg-white rounded-xl p-6 text-center text-slate-500 text-sm mb-6">
+  🎉 Gak ada request pending. Bagus!
+</div>
+{{end}}
+
+{{if .recent}}
+<h2 class="font-semibold mb-2 text-slate-600">Riwayat Terbaru</h2>
+<div class="space-y-2">
+  {{range .recent}}
+    {{template "request_card" dict "r" .}}
+  {{end}}
+</div>
+{{end}}
+{{end}}

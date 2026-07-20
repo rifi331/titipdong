@@ -3,6 +3,7 @@ package catalog
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -109,3 +110,25 @@ func (s *Store) Delete(ctx context.Context, ownerID, id int64) error {
 		`DELETE FROM catalog_items WHERE id=$1 AND jastiper_user_id=$2`, id, ownerID)
 	return err
 }
+
+// GetPublic loads a single active catalog item by id (for the public request form).
+// Returns ErrNotFound if the item doesn't exist or is archived.
+func (s *Store) GetPublic(ctx context.Context, id int64) (Item, error) {
+	var it Item
+	err := s.pool.QueryRow(ctx, `
+		SELECT c.id, c.jastiper_user_id, c.title, c.description, c.est_price_foreign,
+		       c.currency, c.photo_path, c.status::text, c.created_at,
+		       COALESCE(u.display_name, u.email)
+		FROM catalog_items c
+		JOIN users u ON u.id = c.jastiper_user_id
+		WHERE c.id = $1 AND c.status = 'active'`, id).
+		Scan(&it.ID, &it.JastiperUserID, &it.Title, &it.Description, &it.EstPriceForeign,
+			&it.Currency, &it.PhotoPath, &it.Status, &it.CreatedAt, &it.JastiperName)
+	if err != nil {
+		return Item{}, ErrNotFound
+	}
+	return it, nil
+}
+
+// ErrNotFound is returned by GetPublic when no active item matches the id.
+var ErrNotFound = errors.New("catalog item not found")

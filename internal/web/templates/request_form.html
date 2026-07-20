@@ -1,0 +1,43 @@
+{{define "title"}}Mau Ini! — TitipDong{{end}}
+{{define "topbar"}}{{end}}
+{{define "bottomnav"}}{{end}}
+{{define "content"}}
+{{$item := .item}}
+<div class="max-w-md mx-auto">
+  <a href="/catalog" class="text-sm text-sky-600">← Kembali ke katalog</a>
+  <h1 class="text-2xl font-bold mt-2 mb-1">Mau Ini! 🛍️</h1>
+  <p class="text-sm text-slate-600 mb-4">Isi data kamu, jastiper langsung dihubungin via WhatsApp. Gak perlu bikin akun.</p>
+
+  <div class="bg-white rounded-xl overflow-hidden shadow-sm border border-slate-100 mb-4">
+    {{if $item.PhotoPath}}<img src="/uploads/{{$item.PhotoPath}}" class="w-full h-40 object-cover">{{else}}<div class="w-full h-40 bg-slate-100 flex items-center justify-center text-4xl">🛍️</div>{{end}}
+    <div class="p-3">
+      <div class="font-semibold">{{$item.Title}}</div>
+      {{if $item.Description}}<div class="text-xs text-slate-500 mt-1">{{$item.Description}}</div>{{end}}
+      <div class="text-sm text-slate-700 mt-1">{{$item.JastiperName}} · {{currencySym $item.Currency}}{{printf "%.0f" $item.EstPriceForeign}}</div>
+    </div>
+  </div>
+
+  {{if .error}}<div class="mb-3 rounded-lg bg-red-50 text-red-700 px-3 py-2 text-sm">{{.error}}</div>{{end}}
+
+  <form method="post" action="/catalog/{{$item.ID}}/request" class="space-y-3 bg-white p-4 rounded-xl shadow-sm">
+    <label class="block">
+      <span class="text-sm text-slate-600">Nama kamu *</span>
+      <input type="text" name="buyer_name" value="{{.name}}" required placeholder="Nama panggilan"
+        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-sky-500">
+    </label>
+    <label class="block">
+      <span class="text-sm text-slate-600">Nomor WhatsApp *</span>
+      <input type="tel" name="buyer_whatsapp" value="{{.wa}}" required placeholder="08xxxxxxxxxx"
+        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-sky-500">
+      <span class="text-xs text-slate-400">Cuma buat jastiper hubungi kamu. Gak disebar.</span>
+    </label>
+    <label class="block">
+      <span class="text-sm text-slate-600">Catatan (opsional)</span>
+      <textarea name="buyer_note" rows="2" placeholder="Mau yang versi besar / 2 pcs / warna tertentu..."
+        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-sky-500">{{.note}}</textarea>
+    </label>
+    <button class="w-full bg-sky-500 hover:bg-sky-600 text-white font-semibold py-2.5 rounded-lg">Kirim Request ✨</button>
+  </form>
+  <p class="text-xs text-slate-400 text-center mt-3">Dengan kirim, kamu setuju jastiper menghubungi kamu via WhatsApp.</p>
+</div>
+{{end}}

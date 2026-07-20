@@ -1,0 +1,28 @@
+{{define "title"}}Request Terkirim — TitipDong{{end}}
+{{define "topbar"}}{{end}}
+{{define "bottomnav"}}{{end}}
+{{define "content"}}
+<div class="max-w-md mx-auto text-center py-8">
+  <div class="text-6xl mb-4">✅</div>
+  <h1 class="text-2xl font-bold mb-2">Request Terkirim!</h1>
+  <p class="text-slate-600 mb-6">
+    {{if .itemTitle}}<b>{{.itemTitle}}</b> dari {{if .jastiperName}}<b>{{.jastiperName}}</b>{{else}}jastiper{{end}}.{{end}}
+    Kamu akan dihubungi via WhatsApp untuk konfirmasi harga & ketersediaan.
+  </p>
+
+  {{if .waLink}}
+  <a href="{{.waLink}}" target="_blank" class="inline-block bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-6 py-3 rounded-full">
+    💬 Kabarin Jastiper Sekarang
+  </a>
+  <p class="text-xs text-slate-400 mt-2">Tap tombol di atas buat langsung chat WhatsApp jastiper.</p>
+  {{else}}
+  <p class="text-sm text-amber-700 bg-amber-50 rounded-lg p-3">
+    Jastiper belum set nomor WhatsApp. Tunggu dia yang hubungi kamu ya.
+  </p>
+  {{end}}
+
+  <div class="mt-8">
+    <a href="/catalog" class="text-sky-600 underline text-sm">← Lihat katalog lain</a>
+  </div>
+</div>
+{{end}}

@@ -245,6 +245,13 @@ func (s *Server) render(w http.ResponseWriter, r *http.Request, name string, dat
 	}
 	if u, ok := auth.UserFrom(r); ok {
 		data["currentUser"] = u
+		// For jastiper/admin, expose the pending-request count so the bottom
+		// nav can show a badge. Best-effort: ignore errors (renders as 0).
+		if u.Role == auth.RoleJastiper || u.Role == auth.RoleAdmin {
+			if n, err := s.requests.CountPending(r.Context(), u.ID); err == nil {
+				data["pendingRequests"] = n
+			}
+		}
 	}
 	data["supportedCurrencies"] = currency.Supported
 	tmpl, err := template.New("").Funcs(templateFuncs).ParseFS(templateFS,

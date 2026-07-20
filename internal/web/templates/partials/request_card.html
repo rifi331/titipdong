@@ -1,0 +1,48 @@
+{{define "request_card"}}
+{{$r := .r}}
+<div id="request-{{$r.ID}}" class="bg-white rounded-xl p-3 shadow-sm border border-slate-100">
+  <div class="flex justify-between items-start gap-2">
+    <div class="flex-1 min-w-0">
+      <div class="font-semibold truncate">{{$r.BuyerName}}</div>
+      <div class="text-xs text-slate-500 truncate">
+        💬 {{$r.BuyerWhatsApp}}
+        {{if $r.ItemTitle}}· {{$r.ItemTitle}}{{end}}
+      </div>
+      {{if $r.BuyerNote}}
+      <div class="text-xs text-slate-600 mt-1 bg-slate-50 rounded p-2">📝 {{$r.BuyerNote}}</div>
+      {{end}}
+    </div>
+    <span class="text-xs px-2 py-0.5 rounded-full shrink-0
+      {{if eq $r.Status "pending"}}bg-amber-100 text-amber-700
+      {{else if eq $r.Status "accepted"}}bg-emerald-100 text-emerald-700
+      {{else}}bg-rose-100 text-rose-700{{end}}">
+      {{$r.Status}}
+    </span>
+  </div>
+
+  {{if eq $r.Status "pending"}}
+  <div class="grid grid-cols-3 gap-2 mt-3">
+    <form method="post" action="/app/requests/{{$r.ID}}/accept"
+      onsubmit="return confirm('Terima request ini? Bakal dibikinin order + customer baru.')">
+      <button class="w-full bg-emerald-500 text-white text-xs py-2 rounded-lg font-semibold">✓ Terima</button>
+    </form>
+    <form method="post" action="/app/requests/{{$r.ID}}/reject" class="flex gap-1">
+      <input name="note" placeholder="alasan (opsional)" class="hidden">
+      <button class="w-full bg-rose-100 text-rose-700 text-xs py-2 rounded-lg">✗ Tolak</button>
+    </form>
+    <a href="/app/requests/{{$r.ID}}/wa" target="_blank" class="text-center bg-slate-100 text-slate-600 text-xs py-2 rounded-lg">💬 Chat</a>
+  </div>
+  {{else if eq $r.Status "accepted"}}
+  <div class="grid grid-cols-2 gap-2 mt-3">
+    <a href="/app/requests/{{$r.ID}}/wa" target="_blank" class="text-center bg-emerald-500 text-white text-xs py-2 rounded-lg">💬 Chat Buyer</a>
+    {{if $r.ConvertedOrderID}}
+    <a href="/app/orders/{{$r.ConvertedOrderID}}" class="text-center bg-sky-100 text-sky-700 text-xs py-2 rounded-lg">📦 Lihat Order</a>
+    {{end}}
+  </div>
+  {{else}}
+  <div class="grid grid-cols-1 gap-2 mt-3">
+    <a href="/app/requests/{{$r.ID}}/wa" target="_blank" class="text-center bg-slate-100 text-slate-500 text-xs py-2 rounded-lg">💬 Chat Buyer</a>
+  </div>
+  {{end}}
+</div>
+{{end}}

@@ -116,3 +116,61 @@ func TripSummaryLink(phone, tripName string, orderCount int, revenueIDR, marginI
 func TripSummaryShareLink(tripName string, orderCount int, revenueIDR, marginIDR float64, topCustomer string) string {
 	return "https://wa.me/?text=" + url.QueryEscape(TripSummaryMessage(tripName, orderCount, revenueIDR, marginIDR, topCustomer))
 }
+
+// BuyerRequestToJastiperMessage is the message a buyer sends (via the public
+// catalog) to the jastiper who owns an item. The buyer taps "Mau Ini!", submits
+// name+WhatsApp+note, then opens WA with this pre-filled text.
+func BuyerRequestToJastiperMessage(jastiperName, buyerName, itemTitle, note string) string {
+	msg := fmt.Sprintf("Halo %s, aku %s tertarik sama %s di katalog TitipDong.",
+		greetingFor(jastiperName), strings.TrimSpace(buyerName), itemTitle)
+	if n := strings.TrimSpace(note); n != "" {
+		msg += fmt.Sprintf("\n\nCatatan: %s", n)
+	}
+	msg += "\n\nBisa dibantu konfirmasi harga & ketersediaan? 🙏"
+	return msg
+}
+
+// BuyerRequestToJastiperLink wraps the message into a wa.me URL addressed to the
+// jastiper's phone.
+func BuyerRequestToJastiperLink(jastiperPhone, jastiperName, buyerName, itemTitle, note string) string {
+	return fmt.Sprintf("https://wa.me/%s?text=%s",
+		Normalize(jastiperPhone),
+		url.QueryEscape(BuyerRequestToJastiperMessage(jastiperName, buyerName, itemTitle, note)))
+}
+
+// JastiperToBuyerAcceptMessage is what the jastiper sends back to the buyer
+// from their dashboard after accepting a request.
+func JastiperToBuyerAcceptMessage(buyerName, itemTitle, estPriceForeign, currency string, estIDR float64) string {
+	priceHint := ""
+	if estIDR > 0 {
+		priceHint = fmt.Sprintf(" Estimasi sekitar %s.", FormatIDR(estIDR))
+	}
+	return fmt.Sprintf(
+		"Halo %s, request %s udah aku terima!%s Aku kabarin lagi pas barangnya udah aku beli ya ✨",
+		greetingFor(buyerName), itemTitle, priceHint,
+	)
+}
+
+// JastiperToBuyerAcceptLink wraps the accept message into a wa.me URL.
+func JastiperToBuyerAcceptLink(buyerPhone, buyerName, itemTitle string, estPriceForeign float64, currency string, estIDR float64) string {
+	return fmt.Sprintf("https://wa.me/%s?text=%s",
+		Normalize(buyerPhone),
+		url.QueryEscape(JastiperToBuyerAcceptMessage(buyerName, itemTitle, fmt.Sprintf("%.0f %s", estPriceForeign, currency), currency, estIDR)))
+}
+
+// JastiperToBuyerRejectMessage is what the jastiper sends when declining.
+func JastiperToBuyerRejectMessage(buyerName, itemTitle, reason string) string {
+	msg := fmt.Sprintf("Halo %s, maaf ya, request %s lagi gak bisa aku bantu", greetingFor(buyerName), itemTitle)
+	if r := strings.TrimSpace(reason); r != "" {
+		msg += fmt.Sprintf(" (%s)", r)
+	}
+	msg += ". Cek katalog aku lain kali ya! 🙏"
+	return msg
+}
+
+// JastiperToBuyerRejectLink wraps the reject message into a wa.me URL.
+func JastiperToBuyerRejectLink(buyerPhone, buyerName, itemTitle, reason string) string {
+	return fmt.Sprintf("https://wa.me/%s?text=%s",
+		Normalize(buyerPhone),
+		url.QueryEscape(JastiperToBuyerRejectMessage(buyerName, itemTitle, reason)))
+}

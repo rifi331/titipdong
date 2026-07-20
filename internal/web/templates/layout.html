@@ -56,6 +56,10 @@
       <a href="/app/orders" class="flex flex-col items-center py-2 text-slate-600 hover:text-sky-600">
         <span class="text-lg">📦</span><span>Order</span>
       </a>
+      <a href="/app/requests" class="flex flex-col items-center py-2 text-slate-600 hover:text-sky-600 relative">
+        <span class="text-lg">📨</span><span>Request</span>
+        {{if .pendingRequests}}<span class="absolute top-1 right-2 bg-rose-500 text-white text-[10px] rounded-full px-1.5 leading-4">{{.pendingRequests}}</span>{{end}}
+      </a>
       <a href="/app/customers" class="flex flex-col items-center py-2 text-slate-600 hover:text-sky-600">
         <span class="text-lg">👥</span><span>Customer</span>
       </a>
