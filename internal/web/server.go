@@ -3,7 +3,9 @@ package web
 
 import (
 	"context"
+	"log"
 	"net/http"
+	"runtime/debug"
 
 	"github.com/alexedwards/scs/v2"
 	"github.com/go-chi/chi/v5"
@@ -62,10 +64,28 @@ func New(cfg config.Config, pool *pgxpool.Pool) *Server {
 	}
 }
 
+// logRecoverer wraps chi's Recoverer but also dumps the panic + stack trace
+// to the server log, so "Internal Server Error" responses are debuggable
+// (the default Recoverer swallows the panic silently).
+func logRecoverer(next http.Handler) http.Handler {
+	fn := func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if rcv := recover(); rcv != nil {
+				log.Printf("PANIC recovered: %s %s -> %v\n%s",
+					r.Method, r.URL.Path, rcv, debug.Stack())
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			}
+		}()
+		next.ServeHTTP(w, r)
+	}
+	return http.HandlerFunc(fn)
+}
+
 // Handler returns the configured HTTP handler.
 func (s *Server) Handler() http.Handler {
 	r := chi.NewRouter()
-	r.Use(middleware.RealIP, middleware.Recoverer, middleware.RequestID)
+	r.Use(middleware.RealIP, middleware.RequestID)
+	r.Use(logRecoverer)
 	r.Use(s.sessions.LoadAndSave)
 
 	// Static assets.

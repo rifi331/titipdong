@@ -42,3 +42,5 @@ docker-compose.local.yml
 j.txt
 *.cookie
 backups/
+unnamed.jpg
+icon-512.png
