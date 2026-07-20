@@ -79,7 +79,14 @@
 
   <label class="block">
     <span class="text-sm text-slate-600">Foto item (opsional)</span>
-    <input type="file" name="photo" accept="image/*" capture="environment" class="mt-1 w-full text-sm">
+    <div class="mt-1 grid grid-cols-2 gap-2">
+      <button type="button" onclick="pickPhoto('photo-input', true)"
+        class="bg-sky-50 border border-sky-200 text-sky-700 py-2 rounded-lg text-xs font-medium">📷 Foto</button>
+      <button type="button" onclick="pickPhoto('photo-input', false)"
+        class="bg-slate-50 border border-slate-200 text-slate-700 py-2 rounded-lg text-xs font-medium">🖼️ Galeri</button>
+    </div>
+    <input type="file" id="photo-input" name="photo" accept="image/*" class="hidden">
+    <div id="file-name" class="hidden text-xs text-emerald-600 mt-1">✓ dipilih</div>
     {{if $o}}{{if $o.PhotoPath}}<input type="hidden" name="existing_photo" value="{{$o.PhotoPath}}">{{end}}{{end}}
   </label>
 

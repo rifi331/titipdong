@@ -9,9 +9,29 @@
 {{if .error}}<div class="mb-3 rounded-lg bg-red-50 text-red-700 px-3 py-2 text-sm">{{.error}}</div>{{end}}
 <form method="post" action="/app/scan" enctype="multipart/form-data" class="bg-white p-4 rounded-xl shadow-sm space-y-3">
   <p class="text-sm text-slate-600">Foto struk dari toko luar negeri. AI akan baca nama item, toko, mata uang, dan harga — kamu tinggal konfirmasi.</p>
-  <input type="file" name="photo" accept="image/*" capture="environment" required
-    class="w-full text-sm">
+
+  <div class="grid grid-cols-2 gap-2">
+    <button type="button" onclick="pickPhoto('photo-input', true)"
+      class="bg-sky-50 border border-sky-200 text-sky-700 py-3 rounded-lg text-sm font-medium">
+      📷 Foto Langsung
+    </button>
+    <button type="button" onclick="pickPhoto('photo-input', false)"
+      class="bg-slate-50 border border-slate-200 text-slate-700 py-3 rounded-lg text-sm font-medium">
+      🖼️ Pilih dari Galeri
+    </button>
+  </div>
+
+  <!-- Single hidden input. The `capture` attribute is toggled via JS before click,
+       so the same input works for both "camera" and "gallery" flows.
+       Without this trick, two inputs with name="photo" would confuse FormFile. -->
+  <input type="file" id="photo-input" name="photo" accept="image/*" class="hidden" required>
+
+  <div id="file-name" class="hidden text-xs text-emerald-600 bg-emerald-50 px-3 py-2 rounded-lg">
+    ✓ <span id="file-name-text">file dipilih</span>
+  </div>
+
   <button class="w-full bg-sky-500 hover:bg-sky-600 text-white font-semibold py-2.5 rounded-lg">Baca Struk</button>
+  <p class="text-xs text-slate-400 text-center">Tips: pakai app scanner (Adobe Scan, Office Lens) buat hasil lebih jelas.</p>
 </form>
 {{end}}
 {{end}}

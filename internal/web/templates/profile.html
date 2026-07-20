@@ -52,7 +52,13 @@
       </label>
       <label class="block">
         <span class="text-sm text-slate-600">Foto KTP</span>
-        <input type="file" name="ktp_photo" accept="image/*" capture="environment" class="mt-1 w-full text-sm">
+        <div class="mt-1 grid grid-cols-2 gap-2">
+          <button type="button" onclick="pickPhoto('ktp-photo-input', true)"
+            class="bg-sky-50 border border-sky-200 text-sky-700 py-2 rounded-lg text-xs font-medium">📷 Foto</button>
+          <button type="button" onclick="pickPhoto('ktp-photo-input', false)"
+            class="bg-slate-50 border border-slate-200 text-slate-700 py-2 rounded-lg text-xs font-medium">🖼️ Galeri</button>
+        </div>
+        <input type="file" id="ktp-photo-input" name="ktp_photo" accept="image/*" class="hidden">
       </label>
       <label class="block">
         <span class="text-sm text-slate-600">Nomor HP / WhatsApp</span>
