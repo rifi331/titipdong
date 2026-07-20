@@ -33,10 +33,6 @@ func main() {
 	// time with "gob: type not registered for interface".
 	gob.Register(scan.Result{})
 
-	cfg, err := config.Load()
-	if err != nil {
-		log.Fatalf("config: %v", err)
-	}
 	log.Printf("titipdong version %s starting", version.Version)
 
 	cfg, err := config.Load()
