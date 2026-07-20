@@ -33,3 +33,8 @@ prompt.txt
 # Internal testing docs (not for public repo)
 SKENARIO_TESTING.md
 HASIL_TESTING_*.md
+
+# Local deploy overrides (contain real IPs/credentials — never commit)
+docker-compose.local.yml
+.env.local
+*.local.yml
