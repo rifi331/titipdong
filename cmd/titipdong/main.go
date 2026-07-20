@@ -3,6 +3,7 @@ package main
 
 import (
 	"context"
+	"encoding/gob"
 	"errors"
 	"log"
 	"net/http"
@@ -17,6 +18,7 @@ import (
 
 	"github.com/titipdong/titipdong/internal/config"
 	"github.com/titipdong/titipdong/internal/db"
+	"github.com/titipdong/titipdong/internal/scan"
 	"github.com/titipdong/titipdong/internal/version"
 	"github.com/titipdong/titipdong/internal/web"
 )
@@ -26,11 +28,21 @@ func main() {
 	// so explicit exports / docker env still win. Missing file is fine.
 	_ = godotenv.Load()
 
+	// Register custom types stored in the session (scs serializes via gob).
+	// Without this, putting a scan.Result into the session panics at encode
+	// time with "gob: type not registered for interface".
+	gob.Register(scan.Result{})
+
 	cfg, err := config.Load()
 	if err != nil {
 		log.Fatalf("config: %v", err)
 	}
 	log.Printf("titipdong version %s starting", version.Version)
+
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("config: %v", err)
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
