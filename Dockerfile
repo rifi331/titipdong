@@ -24,7 +24,13 @@ RUN go mod download
 COPY . .
 # Overwrite the dev CSS with the production build from stage 1.
 COPY --from=css /app/web/static/app.css ./web/static/app.css
-RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/titipdong ./cmd/titipdong
+# Inject the git ref (tag/branch/sha) as version.Version at build time.
+# github.ref is refs/tags/v0.4.0 -> version string "v0.4.0"; for branch pushes
+# it's refs/heads/main -> "main-<sha>". Falls back to "dev" for local builds.
+ARG APP_VERSION=dev
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath \
+    -ldflags="-s -w -X github.com/titipdong/titipdong/internal/version.Version=${APP_VERSION}" \
+    -o /out/titipdong ./cmd/titipdong
 
 # ---------- Stage 3: runtime ----------
 FROM gcr.io/distroless/static-debian12:nonroot

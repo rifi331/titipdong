@@ -17,6 +17,7 @@ import (
 
 	"github.com/titipdong/titipdong/internal/config"
 	"github.com/titipdong/titipdong/internal/db"
+	"github.com/titipdong/titipdong/internal/version"
 	"github.com/titipdong/titipdong/internal/web"
 )
 
@@ -29,6 +30,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("config: %v", err)
 	}
+	log.Printf("titipdong version %s starting", version.Version)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
