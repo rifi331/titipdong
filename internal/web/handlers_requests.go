@@ -51,13 +51,18 @@ func (s *Server) handleRequestSubmit(w http.ResponseWriter, r *http.Request) {
 	// Lookup the jastiper's WhatsApp (from their most recent approved KYC).
 	jastiperPhone := s.kyc.PhoneForUser(r.Context(), item.JastiperUserID)
 
-	// Persist the request.
+	// Persist the request. Snapshot the catalog item's price/currency so the
+	// request is self-contained even if the catalog row is later edited/deleted.
 	_, err = s.requests.Submit(r.Context(), requests.Request{
-		CatalogItemID:  item.ID,
+		CatalogItemID:  &item.ID,
 		JastiperUserID: item.JastiperUserID,
 		BuyerName:      name,
 		BuyerWhatsApp:  wa,
 		BuyerNote:      note,
+		ItemTitle:      item.Title,
+		ItemDescription: item.Description,
+		ItemCurrency:   item.Currency,
+		ItemEstPrice:   item.EstPriceForeign,
 	})
 	if err != nil {
 		// Most likely the spam-throttle unique index fired.

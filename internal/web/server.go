@@ -85,6 +85,8 @@ func (s *Server) Handler() http.Handler {
 		r.Get("/catalog", s.handleCatalogPublic)
 		r.Get("/catalog/{id}/request", s.handleRequestForm)
 		r.Post("/catalog/{id}/request", s.handleRequestSubmit)
+		r.Get("/request", s.handleCustomRequestForm)
+		r.Post("/request", s.handleCustomRequestSubmit)
 		r.Get("/catalog/thanks", s.handleRequestThanks)
 		r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)

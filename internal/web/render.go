@@ -32,6 +32,7 @@ var templateFuncs = template.FuncMap{
 	"isFinal":       func(s orders.Status) bool { return orders.NextStatus(s) == s },
 	"isPaid":        func(p bool) bool { return p },
 	"deref":         derefInt64,
+	"deref0":        derefInt64Str,
 	"firstNonEmpty": firstNonEmptyStr,
 	"subtract":      subtractFloat,
 	"fmtDate":       fmtDate,
@@ -214,6 +215,15 @@ func derefInt64(p *int64) int64 {
 		return 0
 	}
 	return *p
+}
+
+// derefInt64Str returns the pointed-to value as a string ("0" if nil),
+// for use in template `eq` comparisons against form values (which are strings).
+func derefInt64Str(p *int64) string {
+	if p == nil {
+		return "0"
+	}
+	return formatInt64(*p)
 }
 
 // firstNonEmptyStr returns the first non-empty string arg, or "".

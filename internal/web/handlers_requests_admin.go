@@ -41,8 +41,9 @@ func (s *Server) handleRequestsList(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleRequestAccept converts a pending request into a real order + customer
-// in a single transaction. On commit, the request is marked accepted with
-// back-references to the created rows.
+// in a single transaction. The jastiper sets the fee model (percent or per_kg)
+// in the form; the order's selling price is computed accordingly. On commit,
+// the request is marked accepted with back-references to the created rows.
 func (s *Server) handleRequestAccept(w http.ResponseWriter, r *http.Request) {
 	u, _ := auth.UserFrom(r)
 	id := pathInt64(r, "id")
@@ -56,8 +57,28 @@ func (s *Server) handleRequestAccept(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Convert: create customer + order in one tx, mark request accepted.
-	orderID, customerID, err := s.convertRequestToOrder(r.Context(), u.ID, req)
+	// Read the jastiper's fee choice from the form (defaults to percent 20).
+	feeModel := requests.FeePercent
+	if m := r.FormValue("fee_model"); m == "per_kg" {
+		feeModel = requests.FeePerKg
+	}
+	var feePercent, feePerKgIDR *float64
+	if feeModel == requests.FeePercent {
+		p := parseAmount(r.FormValue("fee_percent"))
+		if p == 0 {
+			p = 20
+		}
+		feePercent = &p
+	} else {
+		p := parseAmount(r.FormValue("fee_per_kg_idr"))
+		if p == 0 {
+			p = 50000
+		}
+		feePerKgIDR = &p
+	}
+
+	// Convert: create customer + order in one tx, mark request accepted + fee set.
+	orderID, customerID, err := s.convertRequestToOrder(r.Context(), u.ID, req, feeModel, feePercent, feePerKgIDR)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -66,18 +87,23 @@ func (s *Server) handleRequestAccept(w http.ResponseWriter, r *http.Request) {
 	// Record back-references (non-fatal if it fails — conversion already happened).
 	_ = s.requests.MarkConverted(r.Context(), req.ID, orderID, customerID)
 
-	// Build a WA link to notify the buyer.
-	estIDR := s.estimatedIDR(r.Context(), req.ItemEstPriceForeign, req.ItemCurrency)
+	// Build a WA link to notify the buyer. Selling price already computed on the order.
+	estIDR := s.estimatedIDR(r.Context(), req.ItemEstPrice, req.ItemCurrency)
 	waLink := whatsapp.JastiperToBuyerAcceptLink(
 		req.BuyerWhatsApp, req.BuyerName, req.ItemTitle,
-		req.ItemEstPriceForeign, req.ItemCurrency, estIDR,
+		req.ItemEstPrice, req.ItemCurrency, estIDR,
 	)
 	http.Redirect(w, r, waLink, http.StatusSeeOther)
 }
 
 // convertRequestToOrder creates the customer + order rows for an accepted
 // request inside a single transaction. Returns (orderID, customerID).
-func (s *Server) convertRequestToOrder(ctx context.Context, ownerID int64, req requests.Request) (int64, int64, error) {
+// The fee model determines how selling_price_idr is computed:
+//   - percent:  selling = (item_est_price × fx) × (1 + fee_percent/100)
+//   - per_kg:   selling = item_est_weight_kg × fee_per_kg_idr
+// For per_kg, amount_foreign/fx are kept as the item reference (not the fee).
+func (s *Server) convertRequestToOrder(ctx context.Context, ownerID int64, req requests.Request,
+	feeModel requests.FeeModel, feePercent, feePerKgIDR *float64) (int64, int64, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return 0, 0, err
@@ -105,14 +131,34 @@ func (s *Server) convertRequestToOrder(ctx context.Context, ownerID int64, req r
 		return 0, 0, err
 	}
 
-	// 2. Snapshot FX + compute selling price (20% default markup; jastiper
-	//    can edit the order afterwards to adjust).
+	// 2. Compute selling price based on the jastiper's chosen fee model.
+	//    - percent:  selling = (item_est_price × fx) × (1 + fee_percent/100)
+	//                markup_pct column = fee_percent, amount_foreign = item price.
+	//    - per_kg:   selling = item_est_weight_kg × fee_per_kg_idr
+	//                markup_pct = 0, amount_foreign = 0 (fee isn't tied to item price).
 	rate, _ := s.currency.Rate(ctx, req.ItemCurrency)
 	if rate <= 0 {
 		rate = 1
 	}
-	markup := 20.0
-	selling := rate * req.ItemEstPriceForeign * (1 + markup/100.0)
+	var markup, selling float64
+	switch feeModel {
+	case requests.FeePerKg:
+		weight := req.ItemEstWeightKg
+		perKg := 0.0
+		if feePerKgIDR != nil {
+			perKg = *feePerKgIDR
+		}
+		selling = weight * perKg
+		markup = 0
+		// Keep the item's reference price for display, but it's not part of selling.
+	default: // FeePercent
+		pct := 20.0
+		if feePercent != nil {
+			pct = *feePercent
+		}
+		markup = pct
+		selling = rate * req.ItemEstPrice * (1 + pct/100.0)
+	}
 
 	var orderID int64
 	err = tx.QueryRow(ctx, `
@@ -123,10 +169,19 @@ func (s *Server) convertRequestToOrder(ctx context.Context, ownerID int64, req r
 		VALUES ($1, $2, $3, '', $4, $5, $6, $7, $8, 'dicari', $9)
 		RETURNING id`,
 		ownerID, customerID, req.ItemTitle, req.ItemCurrency,
-		req.ItemEstPriceForeign, markup, rate, selling,
-		"dari request katalog #"+itoa(req.ID),
+		req.ItemEstPrice, markup, rate, selling,
+		"dari request #"+itoa(req.ID),
 	).Scan(&orderID)
 	if err != nil {
+		return 0, 0, err
+	}
+
+	// 2b. Stamp the request with the chosen fee model + values.
+	if _, err := tx.Exec(ctx, `
+		UPDATE buyer_requests
+		SET fee_model = $1::fee_model, fee_percent = $2, fee_per_kg_idr = $3
+		WHERE id = $4`,
+		string(feeModel), feePercent, feePerKgIDR, req.ID); err != nil {
 		return 0, 0, err
 	}
 
@@ -187,10 +242,10 @@ func (s *Server) handleRequestWA(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "nomor WhatsApp buyer gak tersedia", http.StatusBadRequest)
 		return
 	}
-	estIDR := s.estimatedIDR(r.Context(), req.ItemEstPriceForeign, req.ItemCurrency)
+	estIDR := s.estimatedIDR(r.Context(), req.ItemEstPrice, req.ItemCurrency)
 	waLink := whatsapp.JastiperToBuyerAcceptLink(
 		req.BuyerWhatsApp, req.BuyerName, req.ItemTitle,
-		req.ItemEstPriceForeign, req.ItemCurrency, estIDR,
+		req.ItemEstPrice, req.ItemCurrency, estIDR,
 	)
 	http.Redirect(w, r, waLink, http.StatusSeeOther)
 }

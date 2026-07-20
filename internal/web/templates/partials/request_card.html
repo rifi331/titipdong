@@ -3,11 +3,17 @@
 <div id="request-{{$r.ID}}" class="bg-white rounded-xl p-3 shadow-sm border border-slate-100">
   <div class="flex justify-between items-start gap-2">
     <div class="flex-1 min-w-0">
-      <div class="font-semibold truncate">{{$r.BuyerName}}</div>
+      <div class="font-semibold truncate">
+        {{$r.BuyerName}}
+        {{if $r.IsCustom}}<span class="text-[10px] bg-sky-100 text-sky-700 px-1.5 rounded-full align-middle">custom</span>{{end}}
+      </div>
       <div class="text-xs text-slate-500 truncate">
         💬 {{$r.BuyerWhatsApp}}
-        {{if $r.ItemTitle}}· {{$r.ItemTitle}}{{end}}
+        {{if $r.ItemOrigin}}· 🌍 {{$r.ItemOrigin}}{{end}}
       </div>
+      <div class="text-sm font-medium mt-1">{{$r.ItemTitle}}</div>
+      {{if $r.ItemEstPrice}}<div class="text-xs text-slate-500">{{fmtForeign $r.ItemEstPrice $r.ItemCurrency}}{{end}}
+      {{if $r.ItemEstWeightKg}} · {{$r.ItemEstWeightKg}} kg{{end}}</div>
       {{if $r.BuyerNote}}
       <div class="text-xs text-slate-600 mt-1 bg-slate-50 rounded p-2">📝 {{$r.BuyerNote}}</div>
       {{end}}
@@ -21,17 +27,37 @@
   </div>
 
   {{if eq $r.Status "pending"}}
-  <div class="grid grid-cols-3 gap-2 mt-3">
-    <form method="post" action="/app/requests/{{$r.ID}}/accept"
-      onsubmit="return confirm('Terima request ini? Bakal dibikinin order + customer baru.')">
-      <button class="w-full bg-emerald-500 text-white text-xs py-2 rounded-lg font-semibold">✓ Terima</button>
-    </form>
-    <form method="post" action="/app/requests/{{$r.ID}}/reject" class="flex gap-1">
-      <input name="note" placeholder="alasan (opsional)" class="hidden">
-      <button class="w-full bg-rose-100 text-rose-700 text-xs py-2 rounded-lg">✗ Tolak</button>
-    </form>
-    <a href="/app/requests/{{$r.ID}}/wa" target="_blank" class="text-center bg-slate-100 text-slate-600 text-xs py-2 rounded-lg">💬 Chat</a>
-  </div>
+  <form method="post" action="/app/requests/{{$r.ID}}/accept" class="mt-3 bg-slate-50 rounded-lg p-2 space-y-2"
+    onsubmit="return confirm('Terima request ini? Bakal dibikinin order + customer baru dengan biaya sesuai pilihan kamu.')">
+    <div class="text-xs font-medium text-slate-600">Set biaya jastip:</div>
+    <div class="grid grid-cols-2 gap-2">
+      <label class="flex items-center gap-1 text-xs">
+        <input type="radio" name="fee_model" value="percent" checked onchange="document.getElementById('fee-pct-{{$r.ID}}').classList.remove('hidden'); document.getElementById('fee-kg-{{$r.ID}}').classList.add('hidden')">
+        Persen harga
+      </label>
+      <label class="flex items-center gap-1 text-xs">
+        <input type="radio" name="fee_model" value="per_kg" onchange="document.getElementById('fee-kg-{{$r.ID}}').classList.remove('hidden'); document.getElementById('fee-pct-{{$r.ID}}').classList.add('hidden')">
+        Per kilogram
+      </label>
+    </div>
+    <div id="fee-pct-{{$r.ID}}">
+      <input type="number" step="0.1" name="fee_percent" value="20" placeholder="20"
+        class="w-full rounded border border-slate-300 px-2 py-1 text-sm">
+      <span class="text-[10px] text-slate-400">% dari (harga × kurs). Default 20%.</span>
+    </div>
+    <div id="fee-kg-{{$r.ID}}" class="hidden">
+      <input type="number" step="1000" name="fee_per_kg_idr" value="50000" placeholder="50000"
+        class="w-full rounded border border-slate-300 px-2 py-1 text-sm">
+      <span class="text-[10px] text-slate-400">Rp per kg. Selling = berat × Rp/kg.</span>
+    </div>
+    <div class="grid grid-cols-2 gap-2">
+      <button class="bg-emerald-500 text-white text-xs py-2 rounded-lg font-semibold">✓ Terima</button>
+    </div>
+  </form>
+  <form method="post" action="/app/requests/{{$r.ID}}/reject" class="mt-2 flex gap-1">
+    <button class="w-full bg-rose-100 text-rose-700 text-xs py-2 rounded-lg">✗ Tolak</button>
+  </form>
+  <a href="/app/requests/{{$r.ID}}/wa" target="_blank" class="block mt-1 text-center bg-slate-100 text-slate-600 text-xs py-2 rounded-lg">💬 Chat Buyer</a>
   {{else if eq $r.Status "accepted"}}
   <div class="grid grid-cols-2 gap-2 mt-3">
     <a href="/app/requests/{{$r.ID}}/wa" target="_blank" class="text-center bg-emerald-500 text-white text-xs py-2 rounded-lg">💬 Chat Buyer</a>

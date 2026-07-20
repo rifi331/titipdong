@@ -2,7 +2,11 @@
 {{define "content"}}
 <div class="max-w-md mx-auto">
   <h1 class="text-2xl font-bold mb-1">Katalog Jastip 🛒</h1>
-  <p class="text-sm text-slate-600 mb-4">Mau sesuatu? Tap <b>"Mau Ini!"</b> — gak perlu bikin akun, langsung connect ke jastiper via WhatsApp.</p>
+  <p class="text-sm text-slate-600 mb-3">Mau sesuatu? Tap <b>"Mau Ini!"</b> — gak perlu bikin akun, langsung connect ke jastiper via WhatsApp.</p>
+
+  <a href="/request" class="block mb-4 bg-white border-2 border-dashed border-sky-300 text-sky-700 rounded-xl p-3 text-center text-sm font-medium hover:bg-sky-50">
+    ✨ Gak nemu? Request barang custom di sini →
+  </a>
 
   {{if .items}}
   <div class="grid grid-cols-1 gap-3">

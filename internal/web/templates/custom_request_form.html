@@ -1,0 +1,82 @@
+{{define "title"}}Request Custom — TitipDong{{end}}
+{{define "topbar"}}{{end}}
+{{define "bottomnav"}}{{end}}
+{{define "content"}}
+<div class="max-w-md mx-auto">
+  <a href="/catalog" class="text-sm text-sky-600">← Kembali ke katalog</a>
+  <h1 class="text-2xl font-bold mt-2 mb-1">Request Barang Custom 📝</h1>
+  <p class="text-sm text-slate-600 mb-4">Gak nemu di katalog? Deskripsikan barang yang mau dititip, pilih jastiper, kirim. Dia bakal hubungi kamu via WhatsApp.</p>
+
+  {{if .hasNone}}
+  <div class="bg-amber-50 border border-amber-200 text-amber-800 rounded-xl p-4 text-sm">{{.error}}</div>
+  {{else}}
+
+  {{if .error}}<div class="mb-3 rounded-lg bg-red-50 text-red-700 px-3 py-2 text-sm">{{.error}}</div>{{end}}
+
+  {{$f := .form}}
+  <form method="post" action="/request" class="space-y-3 bg-white p-4 rounded-xl shadow-sm">
+    <label class="block">
+      <span class="text-sm text-slate-600">Pilih Jastiper *</span>
+      <select name="jastiper_id" required class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2">
+        <option value="">— pilih jastiper —</option>
+        {{range .jastipers}}
+        <option value="{{.ID}}" {{if $f}}{{if eq $f.jastiper_id .ID}}selected{{end}}{{else}}{{if eq $.selectedJastiper .ID}}selected{{end}}{{end}}>{{.Name}}</option>
+        {{end}}
+      </select>
+    </label>
+
+    <label class="block">
+      <span class="text-sm text-slate-600">Nama barang *</span>
+      <input type="text" name="item_title" value="{{if $f}}{{$f.item_title}}{{end}}" required placeholder="mis. Sony WH-1000XM5"
+        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-sky-500">
+    </label>
+
+    <div class="grid grid-cols-2 gap-2">
+      <label class="block">
+        <span class="text-sm text-slate-600">Asal (opsional)</span>
+        <input type="text" name="item_origin" value="{{if $f}}{{$f.item_origin}}{{end}}" placeholder="Jepang / US / Tokyo"
+          class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-sky-500">
+      </label>
+      <label class="block">
+        <span class="text-sm text-slate-600">Mata uang referensi</span>
+        <select name="item_currency" class="mt-1 w-full rounded-lg border border-slate-300 px-2 py-2">
+          {{$cur := "JPY"}}{{if $f}}{{if $f.item_currency}}{{$cur = $f.item_currency}}{{end}}{{end}}
+          {{range .supportedCurrencies}}<option value="{{.}}" {{if eq . $cur}}selected{{end}}>{{.}}</option>{{end}}
+        </select>
+      </label>
+    </div>
+
+    <div class="grid grid-cols-2 gap-2">
+      <label class="block">
+        <span class="text-sm text-slate-600">Estimasi harga (opsional)</span>
+        <input type="text" inputmode="decimal" name="item_est_price" value="{{if $f}}{{$f.item_est_price}}{{end}}" placeholder="40000"
+          class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-sky-500">
+      </label>
+      <label class="block">
+        <span class="text-sm text-slate-600">Estimasi berat kg (opsional)</span>
+        <input type="text" inputmode="decimal" name="item_est_weight_kg" value="{{if $f}}{{$f.item_est_weight_kg}}{{end}}" placeholder="0.5"
+          class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-sky-500">
+      </label>
+    </div>
+
+    <label class="block">
+      <span class="text-sm text-slate-600">Nama kamu *</span>
+      <input type="text" name="buyer_name" value="{{if $f}}{{$f.buyer_name}}{{end}}" required
+        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-sky-500">
+    </label>
+    <label class="block">
+      <span class="text-sm text-slate-600">Nomor WhatsApp *</span>
+      <input type="tel" name="buyer_whatsapp" value="{{if $f}}{{$f.buyer_whatsapp}}{{end}}" required placeholder="08xxxxxxxxxx"
+        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-sky-500">
+    </label>
+    <label class="block">
+      <span class="text-sm text-slate-600">Catatan (opsional)</span>
+      <textarea name="buyer_note" rows="2" placeholder="warna hitam, ukuran M, link referensi..."
+        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-sky-500">{{if $f}}{{$f.buyer_note}}{{end}}</textarea>
+    </label>
+
+    <button class="w-full bg-sky-500 hover:bg-sky-600 text-white font-semibold py-2.5 rounded-lg">Kirim Request ✨</button>
+  </form>
+  {{end}}
+</div>
+{{end}}
