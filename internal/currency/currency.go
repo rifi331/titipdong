@@ -16,7 +16,7 @@ import (
 )
 
 // Supported lists currencies the jastiper is likely to encounter.
-var Supported = []string{"JPY", "KRW", "SGD", "THB", "HKD", "USD", "CNY", "TWD", "MYR", "AUD", "EUR", "GBP", "IDR"}
+var Supported = []string{"JPY", "KRW", "SGD", "THB", "HKD", "USD", "CNY", "TWD", "MYR", "AUD", "EUR", "GBP", "IDR", "PHP", "INR", "CAD", "NZD", "CHF"}
 
 // Service fetches and caches FX rates.
 type Service struct {

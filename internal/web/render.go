@@ -183,6 +183,18 @@ func currencySym(code string) string {
 		return "£"
 	case "AUD":
 		return "A$"
+	case "PHP":
+		return "₱"
+	case "INR":
+		return "₹"
+	case "CAD":
+		return "C$"
+	case "NZD":
+		return "NZ$"
+	case "CHF":
+		return "CHF "
+	case "VND":
+		return "₫"
 	}
 	return strings.ToUpper(code) + " "
 }

@@ -117,35 +117,70 @@ func (s *Service) Extract(ctx context.Context, imageBytes []byte, contentType st
 
 // normalizeCurrency maps common non-ISO forms (symbols, local abbreviations)
 // to their ISO 4217 codes. Falls back to the input upper-cased.
-// OpenAI sometimes returns "RM" (Malaysian Ringgit) instead of "MYR",
-// "¥" for JPY/CNY (ambiguous, default to JPY), etc.
+// OpenAI often returns local symbols/names from receipts: "Rp", "RM", "¥",
+// "$", "P", "Rs", etc. — without mapping these the currency dropdown in the
+// pre-filled order form won't match any supported option.
 func normalizeCurrency(s string) string {
 	s = strings.ToUpper(strings.TrimSpace(s))
 	switch s {
-	case "RM", "RINGGIT", "MY":
+	// Indonesia
+	case "RP", "RUP", "RUPIAH", "IDR", "RP.":
+		return "IDR"
+	// Malaysia
+	case "RM", "RINGGIT", "MY", "RM.":
 		return "MYR"
-	case "¥", "YEN", "YUAN", "JPY¥":
-		return "JPY" // ambiguous ¥ defaults to JPY
-	case "CN¥", "RMB", "CNY¥":
+	// Japan (¥ is ambiguous with CNY; default to JPY since jastip is most
+	// likely scanning a Japanese receipt for a JPY purchase).
+	case "¥", "JP¥", "YEN", "EN", "JPY¥":
+		return "JPY"
+	// China
+	case "CN¥", "RMB", "YUAN", "CNY¥", "KUAI":
 		return "CNY"
-	case "₩", "WON":
+	// Korea
+	case "₩", "WON", "KRW₩", "JEON":
 		return "KRW"
-	case "฿", "BAHT":
-		return "THB"
-	case "$", "USD$":
-		return "USD"
-	case "S$", "SGD$":
-		return "SGD"
-	case "HK$":
-		return "HKD"
-	case "NT$":
+	// Taiwan
+	case "NT$", "NT", "TWD$", "NTD":
 		return "TWD"
-	case "€", "EUR€":
-		return "EUR"
-	case "£", "GBP£":
-		return "GBP"
-	case "A$", "AUD$":
+	// Hong Kong
+	case "HK$", "HK", "HKD$":
+		return "HKD"
+	// Singapore
+	case "S$", "SGD$", "SING$":
+		return "SGD"
+	// Thailand
+	case "฿", "THB฿", "BAHT", "TBH":
+		return "THB"
+	// US / generic dollar (ambiguous — default USD, jastiper can change)
+	case "$", "US$", "USD$", "DOLLAR", "DOLLARS":
+		return "USD"
+	// Australia
+	case "A$", "AUD$", "AU$", "AUS$":
 		return "AUD"
+	// Euro zone
+	case "€", "EUR€", "EURO", "EUROS":
+		return "EUR"
+	// UK
+	case "£", "GBP£", "POUND", "POUNDS", "STERLING":
+		return "GBP"
+	// Philippines
+	case "₱", "PHP₱", "PESO", "PESOS":
+		return "PHP"
+	// India
+	case "₹", "INR₹", "RUPEE", "RUPEES", "RS", "RS.":
+		return "INR"
+	// Vietnam
+	case "₫", "VND₫", "DONG":
+		return "VND"
+	// Canada
+	case "C$", "CAD$", "CAN$":
+		return "CAD"
+	// New Zealand
+	case "NZ$", "NZD$":
+		return "NZD"
+	// Switzerland
+	case "CHF", "FR", "FRANC", "FRANCS", "SFR":
+		return "CHF"
 	}
 	return s
 }
