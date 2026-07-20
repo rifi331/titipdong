@@ -39,3 +39,5 @@ HASIL_TESTING_*.md
 docker-compose.local.yml
 .env.local
 *.local.yml
+j.txt
+*.cookie
