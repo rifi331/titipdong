@@ -1,27 +1,22 @@
 # TitipDong — TrueNAS "Install via YAML" (bridge network, external Postgres)
 #
-# Setup: Postgres sudah jalan via TrueNAS app catalog di __TRUENAS_IP__:5432.
-#        App titipdong di-deploy sebagai container terpisah, connect ke Postgres via IP host.
+# Setup: Postgres already running via TrueNAS app catalog on the TrueNAS host
+#        (default port 5432). The titipdong app deploys as a separate container
+#        and connects to that Postgres via the host's LAN IP.
 #
 # HOW TO USE:
 #   1. TrueNAS Scale → Apps → Custom App → "Install via YAML"
 #   2. Paste this entire file. Replace every __PLACEHOLDER__ (search for "__").
 #   3. Make sure your Postgres app catalog already has a database named "titipdong"
-#      AND a user that can connect to it (see notes below).
-#   4. Deploy. Cloudflare Tunnel maps titipdong.parifi.dev → http://__TRUENAS_IP__:30000.
+#      AND that the user in DATABASE_URL can connect to it.
+#   4. Deploy. Cloudflare Tunnel maps your domain → http://<truenas-ip>:30000.
 #
-# PLACEHOLDERS to replace:
-#   __DB_PASSWORD__    — password for the postgres user at __TRUENAS_IP__:5432
-#   __SESSION_SECRET__ — 64-char random hex (run: openssl rand -hex 32)
-#   __OPENAI_API_KEY__ — OpenAI key to enable receipt scan (empty = feature hidden)
-#
-# IMPORTANT — about the Postgres app catalog:
-#   The "postgres" app from TrueNAS catalog typically creates a user named after the
-#   POSTGRES_USER you set when installing it (often "postgres"). The DATABASE_URL below
-#   uses user "postgres" with password __DB_PASSWORD__. Make sure:
-#     a) A database named "titipdong" exists on that Postgres, AND
-#     b) User "postgres" has access to it.
-#   If your Postgres app uses a different user/db name, edit DATABASE_URL accordingly.
+# PLACEHOLDERS to replace (do NOT commit real values — keep them private):
+#   __TRUENAS_IP__      — LAN IP of your TrueNAS box (e.g. 192.168.x.y)
+#   __DB_PASSWORD__     — password for the postgres user at __TRUENAS_IP__:5432
+#   __SESSION_SECRET__  — 64-char random hex (run: openssl rand -hex 32)
+#   __OPENAI_API_KEY__  — OpenAI key to enable receipt scan (empty "" = feature hidden)
+#   __PUBLIC_DOMAIN__   — public HTTPS domain via Cloudflare (e.g. https://app.example.com)
 
 services:
   titipdong:
@@ -32,12 +27,12 @@ services:
       - "30000:30000"                  # host:container — Cloudflare Tunnel points here
     environment:
       ADDR: ":30000"                   # app listens on container port 30000
-      # Connect to the existing Postgres app catalog on the TrueNAS host IP.
+      # Connect to the existing Postgres app catalog running on the TrueNAS host.
       DATABASE_URL: "postgres://postgres:__DB_PASSWORD__@__TRUENAS_IP__:5432/titipdong?sslmode=disable"
       SESSION_SECRET: "__SESSION_SECRET__"
       ADMIN_EMAIL: ""                  # leave empty = inject admin via SQL
       ADMIN_PASSWORD: ""               # leave empty = inject admin via SQL
-      BASE_URL: "https://titipdong.parifi.dev"
+      BASE_URL: "__PUBLIC_DOMAIN__"
       OPENAI_API_KEY: "__OPENAI_API_KEY__"
       FX_BASE_URL: "https://api.frankfurter.app"
       UPLOADS_DIR: "/app/uploads"
