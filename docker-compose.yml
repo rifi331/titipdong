@@ -1,38 +1,52 @@
-# TitipDong — full stack for TrueNAS / any docker host.
-# Usage:
-#   1. Copy .env.example -> .env, fill in secrets.
-#   2. docker compose up -d
-#   3. Open http://<host>:8080 and log in with ADMIN_EMAIL / ADMIN_PASSWORD.
+# TitipDong — deploy manifest for TrueNAS "Install via YAML" (or any docker host).
+#
+# HOW TO USE:
+#   1. Copy this file's contents into TrueNAS Scale → Apps → Custom App → "Install via YAML".
+#   2. Replace every __PLACEHOLDER__ below with your real values (search for "__").
+#   3. Deploy. First boot auto-creates the admin from ADMIN_EMAIL/ADMIN_PASSWORD.
+#   4. Open http://<truenas-ip>:8877 and log in.
+#
+# If you prefer to inject the admin directly into the DB (skip ADMIN_* env),
+# leave ADMIN_EMAIL/ADMIN_PASSWORD empty and insert the user via SQL after first boot.
+#
+# Placeholders to replace:
+#   __DB_PASSWORD__         — strong password for the postgres user (used by both containers)
+#   __SESSION_SECRET__      — 64+ char random hex (generate: openssl rand -hex 32)
+#   __ADMIN_EMAIL__         — first-boot admin email (or leave empty to inject manually)
+#   __ADMIN_PASSWORD__      — first-boot admin password (or leave empty to inject manually)
+#   __BASE_URL__            — public URL (e.g. https://app.yourdomain.com) for PWA manifest
+#   __OPENAI_API_KEY__      — OpenAI API key to enable receipt scan (empty = feature hidden)
+
 services:
-  app:
-    image: ghcr.io/${GHCR_OWNER:-titipdong}/titipdong:latest
-    # To build locally instead of pulling from GHCR, comment out `image:` and uncomment:
-    # build: .
+  titipdong:
+    image: ghcr.io/rifi331/titipdong:latest
+    container_name: titipdong
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "8877:8080"                    # host:container — Cloudflare Tunnel points here
     environment:
       ADDR: ":8080"
-      DATABASE_URL: "postgres://titipdong:${POSTGRES_PASSWORD:-titipdong}@db:5432/titipdong?sslmode=disable"
-      SESSION_SECRET: "${SESSION_SECRET}"
-      ADMIN_EMAIL: "${ADMIN_EMAIL}"
-      ADMIN_PASSWORD: "${ADMIN_PASSWORD}"
-      BASE_URL: "${BASE_URL:-http://localhost:8080}"
-      OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
-      FX_BASE_URL: "${FX_BASE_URL:-https://api.frankfurter.app}"
+      DATABASE_URL: "postgres://titipdong:__DB_PASSWORD__@titipdong-db:5432/titipdong?sslmode=disable"
+      SESSION_SECRET: "__SESSION_SECRET__"
+      ADMIN_EMAIL: "__ADMIN_EMAIL__"            # leave "" to inject admin via SQL instead
+      ADMIN_PASSWORD: "__ADMIN_PASSWORD__"      # leave "" to inject admin via SQL instead
+      BASE_URL: "__BASE_URL__"
+      OPENAI_API_KEY: "__OPENAI_API_KEY__"      # receipt scan uses gpt-4o-mini
+      FX_BASE_URL: "https://api.frankfurter.app"
       UPLOADS_DIR: "/app/uploads"
     volumes:
       - uploads:/app/uploads
     depends_on:
-      db:
+      titipdong-db:
         condition: service_healthy
 
-  db:
+  titipdong-db:
     image: postgres:16-alpine
+    container_name: titipdong-db
     restart: unless-stopped
     environment:
       POSTGRES_USER: titipdong
-      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-titipdong}"
+      POSTGRES_PASSWORD: "__DB_PASSWORD__"
       POSTGRES_DB: titipdong
     volumes:
       - pgdata:/var/lib/postgresql/data
