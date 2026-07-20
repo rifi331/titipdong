@@ -22,3 +22,7 @@ node_modules/
 Thumbs.db
 .vscode/
 .idea/
+
+# Project spec / private notes
+prompt.txt
+*.prompt.txt
