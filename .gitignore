@@ -29,3 +29,7 @@ prompt.txt
 
 # Editor configs
 .obsidian/
+
+# Internal testing docs (not for public repo)
+SKENARIO_TESTING.md
+HASIL_TESTING_*.md
