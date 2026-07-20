@@ -26,3 +26,6 @@ Thumbs.db
 # Project spec / private notes
 prompt.txt
 *.prompt.txt
+
+# Editor configs
+.obsidian/
