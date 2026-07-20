@@ -1,0 +1,23 @@
+# Binaries
+titipdong
+titipdong.exe
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Local runtime
+uploads/
+*.log
+.env
+.env.*
+!.env.example
+
+# Node
+node_modules/
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

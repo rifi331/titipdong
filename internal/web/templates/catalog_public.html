@@ -1,0 +1,17 @@
+{{define "title"}}Katalog Jastip — TitipDong{{end}}
+{{define "content"}}
+<h1 class="text-2xl font-bold mb-4">Katalog Jastip 🛒</h1>
+{{if .items}}
+<div class="grid grid-cols-2 gap-3">
+  {{range .items}}
+  <div class="bg-white rounded-xl overflow-hidden shadow-sm border border-slate-100">
+    {{if .PhotoPath}}<img src="/uploads/{{.PhotoPath}}" class="w-full h-32 object-cover">{{else}}<div class="w-full h-32 bg-slate-100 flex items-center justify-center text-3xl">🛍️</div>{{end}}
+    <div class="p-2">
+      <div class="font-medium text-sm truncate">{{.Title}}</div>
+      <div class="text-xs text-slate-500">{{.JastiperName}} · {{currencySym .Currency}}{{printf "%.0f" .EstPriceForeign}}</div>
+    </div>
+  </div>
+  {{end}}
+</div>
+{{else}}<p class="text-sm text-slate-500">Belum ada item. Yuk <a href="/signup" class="text-sky-600 underline">daftar jadi Jastiper</a>!</p>{{end}}
+{{end}}

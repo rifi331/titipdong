@@ -1,0 +1,17 @@
+{{define "title"}}Scan Struk — TitipDong{{end}}
+{{define "content"}}
+<h1 class="text-2xl font-bold mb-4">Scan Struk 📸</h1>
+{{if .disabled}}
+<div class="bg-amber-50 border border-amber-200 text-amber-800 rounded-xl p-4 text-sm">
+  Fitur scan struk sedang nonaktif. Hubungi admin untuk mengaktifkan <code>OPENAI_API_KEY</code>.
+</div>
+{{else}}
+{{if .error}}<div class="mb-3 rounded-lg bg-red-50 text-red-700 px-3 py-2 text-sm">{{.error}}</div>{{end}}
+<form method="post" action="/app/scan" enctype="multipart/form-data" class="bg-white p-4 rounded-xl shadow-sm space-y-3">
+  <p class="text-sm text-slate-600">Foto struk dari toko luar negeri. AI akan baca nama item, toko, mata uang, dan harga — kamu tinggal konfirmasi.</p>
+  <input type="file" name="photo" accept="image/*" capture="environment" required
+    class="w-full text-sm">
+  <button class="w-full bg-sky-500 hover:bg-sky-600 text-white font-semibold py-2.5 rounded-lg">Baca Struk</button>
+</form>
+{{end}}
+{{end}}

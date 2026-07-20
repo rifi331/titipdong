@@ -1,0 +1,118 @@
+// Package whatsapp builds wa.me deep links with pre-filled customer messages.
+package whatsapp
+
+import (
+	"fmt"
+	"net/url"
+	"strings"
+
+	"github.com/titipdong/titipdong/internal/orders"
+)
+
+// Normalize strips non-digits from a phone field (keeps leading + as digits).
+// e.g. "+62 812-3456-7890" -> "6281234567890".
+func Normalize(phone string) string {
+	var b strings.Builder
+	for _, r := range phone {
+		if r >= '0' && r <= '9' {
+			b.WriteRune(r)
+		}
+	}
+	s := b.String()
+	// Convert leading 0 (local format) to 62 (Indonesia).
+	if strings.HasPrefix(s, "0") {
+		s = "62" + s[1:]
+	}
+	return s
+}
+
+// FormatIDR renders a rupiah amount compactly, e.g. 366000 -> "Rp 366rb", 1500000 -> "Rp 1,5jt".
+func FormatIDR(amount float64) string {
+	amt := int64(amount)
+	switch {
+	case amt >= 1_000_000:
+		return "Rp " + commaDecimal(float64(amt)/1_000_000) + "jt"
+	case amt >= 1_000:
+		return fmt.Sprintf("Rp %drb", amt/1_000)
+	default:
+		return fmt.Sprintf("Rp %d", amt)
+	}
+}
+
+// commaDecimal formats a value with one decimal place using a comma separator,
+// trimming the trailing ",0" (so 1.0 -> "1", 1.5 -> "1,5").
+func commaDecimal(v float64) string {
+	s := fmt.Sprintf("%.1f", v)
+	s = strings.TrimSuffix(s, ".0")
+	return strings.ReplaceAll(s, ".", ",")
+}
+
+// ComposeLink builds a wa.me URL with a pre-filled message for a status transition.
+// customerName and item are the human-readable pieces; priceIDR may be 0 to omit.
+func ComposeLink(phone, customerName, item string, st orders.Status, priceIDR float64) string {
+	msg := Message(customerName, item, st, priceIDR)
+	num := Normalize(phone)
+	return fmt.Sprintf("https://wa.me/%s?text=%s", num, url.QueryEscape(msg))
+}
+
+// Message formats the friendly status-update text.
+func Message(customerName, item string, st orders.Status, priceIDR float64) string {
+	greeting := greetingFor(customerName)
+	label := strings.ToLower(orders.StatusLabel(st))
+	price := ""
+	if priceIDR > 0 {
+		price = ", " + FormatIDR(priceIDR)
+	}
+	switch st {
+	case orders.StatusKetemu:
+		return fmt.Sprintf("Halo %s, %s udah ketemu%s. Konfirmasi ya? 🙏", greeting, item, price)
+	case orders.StatusDibeli:
+		return fmt.Sprintf("Halo %s, %s udah dibeli%s. Tunggu kabar selanjutnya ya ✨", greeting, item, price)
+	case orders.StatusDibayar:
+		return fmt.Sprintf("Halo %s, pembayaran %s diterima%s. Makasih ya! 🙏", greeting, item, price)
+	case orders.StatusDiantar:
+		return fmt.Sprintf("Halo %s, %s lagi diantar ya%s. Sampai ketemu! 📦", greeting, item, price)
+	default:
+		return fmt.Sprintf("Halo %s, update %s: %s%s", greeting, item, label, price)
+	}
+}
+
+// greetingFor picks a friendly address from a name; falls back to "Kak".
+func greetingFor(name string) string {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return "Kak"
+	}
+	lower := strings.ToLower(name)
+	if strings.HasPrefix(lower, "bu ") || strings.HasPrefix(lower, "ibu ") {
+		return "Bu " + strings.TrimSpace(name[strings.IndexByte(name, ' ')+1:])
+	}
+	if strings.HasPrefix(lower, "pak ") || strings.HasPrefix(lower, "mas ") || strings.HasPrefix(lower, "mbak ") {
+		return name
+	}
+	return name
+}
+
+// TripSummaryMessage builds a friendly end-of-trip recap to share on WhatsApp.
+func TripSummaryMessage(tripName string, orderCount int, revenueIDR, marginIDR float64, topCustomer string) string {
+	top := topCustomer
+	if top == "" {
+		top = "-"
+	}
+	return fmt.Sprintf(
+		"Trip %s selesai! 🎉\nTotal order: %d\nOmzet: %s\nMargin: %s\nTop customer: %s",
+		tripName, orderCount, FormatIDR(revenueIDR), FormatIDR(marginIDR), top,
+	)
+}
+
+// TripSummaryLink wraps TripSummaryMessage into a wa.me URL.
+func TripSummaryLink(phone, tripName string, orderCount int, revenueIDR, marginIDR float64, topCustomer string) string {
+	return fmt.Sprintf("https://wa.me/%s?text=%s",
+		Normalize(phone), url.QueryEscape(TripSummaryMessage(tripName, orderCount, revenueIDR, marginIDR, topCustomer)))
+}
+
+// TripSummaryShareLink returns a wa.me/?text= link that opens the share screen
+// without a specific recipient (used when no phone is known).
+func TripSummaryShareLink(tripName string, orderCount int, revenueIDR, marginIDR float64, topCustomer string) string {
+	return "https://wa.me/?text=" + url.QueryEscape(TripSummaryMessage(tripName, orderCount, revenueIDR, marginIDR, topCustomer))
+}

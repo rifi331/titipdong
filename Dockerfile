@@ -1,0 +1,37 @@
+# syntax=docker/dockerfile:1
+# TitipDong — multi-stage build.
+# Stage 1: build Tailwind CSS. Stage 2: build Go binary with embedded assets.
+# Stage 3: tiny runtime image.
+
+# ---------- Stage 1: CSS ----------
+FROM node:20-alpine AS css
+WORKDIR /app
+COPY package.json package-lock.json* ./
+RUN npm ci || npm install
+COPY tailwind.config.js ./
+COPY web/static/src.css ./web/static/src.css
+COPY internal/web/templates ./internal/web/templates
+RUN npx tailwindcss -i ./web/static/src.css -o ./web/static/app.css --minify
+
+# ---------- Stage 2: Go build ----------
+FROM golang:1.22-alpine AS go
+WORKDIR /src
+RUN apk add --no-cache git
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+# Overwrite the dev CSS with the production build from stage 1.
+COPY --from=css /app/web/static/app.css ./web/static/app.css
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/titipdong ./cmd/titipdong
+
+# ---------- Stage 3: runtime ----------
+FROM gcr.io/distroless/static-debian12:nonroot
+WORKDIR /app
+COPY --from=go /out/titipdong /app/titipdong
+# Templates are embedded at build time, but we also ship static assets that
+# are served from disk (JS, compiled CSS, manifest, icons, service worker).
+COPY web/static /app/web/static
+# uploads volume is mounted at runtime; create the dir so ServeFile has a root.
+EXPOSE 8080
+USER nonroot:nonroot
+ENTRYPOINT ["/app/titipdong"]

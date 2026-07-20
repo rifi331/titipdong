@@ -1,0 +1,10 @@
+# Normalize line endings: text files use LF in the repo regardless of OS.
+* text=auto eol=lf
+
+# Binary assets — never touch their bytes.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.woff binary
+*.woff2 binary

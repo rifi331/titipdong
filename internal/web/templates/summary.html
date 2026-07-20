@@ -1,0 +1,71 @@
+{{define "title"}}Ringkasan — TitipDong{{end}}
+{{define "content"}}
+{{$s := .summary}}
+<h1 class="text-2xl font-bold mb-4">Ringkasan 📊</h1>
+
+<div class="grid grid-cols-2 gap-3 mb-4">
+  <div class="bg-white rounded-xl p-3 shadow-sm">
+    <div class="text-xs text-slate-500">Total Order</div>
+    <div class="text-xl font-bold">{{$s.OrderCount}}</div>
+  </div>
+  <div class="bg-white rounded-xl p-3 shadow-sm">
+    <div class="text-xs text-slate-500">Omzet</div>
+    <div class="text-lg font-bold text-emerald-600">{{fmtIDR $s.RevenueIDR}}</div>
+  </div>
+  <div class="bg-white rounded-xl p-3 shadow-sm">
+    <div class="text-xs text-slate-500">Modal</div>
+    <div class="text-lg font-bold">{{fmtIDR $s.CostIDR}}</div>
+  </div>
+  <div class="bg-white rounded-xl p-3 shadow-sm">
+    <div class="text-xs text-slate-500">Margin ({{fmt2 $s.NetMarginPct}}%)</div>
+    <div class="text-lg font-bold text-sky-600">{{fmtIDR $s.NetMarginIDR}}</div>
+  </div>
+</div>
+
+{{if .summaryLink}}
+<a href="{{.summaryLink}}" target="_blank" class="block mb-4 bg-emerald-500 text-white text-center py-3 rounded-xl font-semibold shadow-sm">
+  📲 Bagikan ke WhatsApp
+</a>
+{{end}}
+
+<div class="grid grid-cols-2 gap-3 mb-4">
+  <div class="bg-white rounded-xl p-3 shadow-sm">
+    <div class="text-xs text-slate-500">👑 Top Customer</div>
+    <div class="font-semibold mt-1">{{or .topCustomer "-"}}</div>
+  </div>
+  <div class="bg-white rounded-xl p-3 shadow-sm">
+    <div class="text-xs text-slate-500">🏪 Top Store</div>
+    <div class="font-semibold mt-1">{{or .bestStore "-"}}</div>
+  </div>
+</div>
+
+<h2 class="font-semibold mb-2">Rincian Per Customer</h2>
+{{if .breakdown}}
+<div class="bg-white rounded-xl shadow-sm divide-y divide-slate-100 mb-4">
+  {{range .breakdown}}
+  <div class="p-3 flex justify-between text-sm">
+    <div>
+      <div class="font-medium">{{.CustomerName}}</div>
+      <div class="text-xs text-slate-500">{{.OrderCount}} order</div>
+    </div>
+    <div class="text-right">
+      <div class="font-semibold">{{fmtIDR .TotalIDR}}</div>
+      {{if gt .Outstanding 0}}<div class="text-xs text-rose-600">duitg {{fmtIDR .Outstanding}}</div>{{end}}
+    </div>
+  </div>
+  {{end}}
+</div>
+{{end}}
+
+<h2 class="font-semibold mb-2">Top Store</h2>
+{{if .topStores}}
+<div class="bg-white rounded-xl shadow-sm divide-y divide-slate-100">
+  {{range .topStores}}
+  <div class="p-3 flex justify-between text-sm">
+    <div>{{.SourceStore}}</div>
+    <div class="text-slate-500">{{.OrderCount}} · {{fmtIDR .RevenueIDR}}</div>
+  </div>
+  {{end}}
+</div>
+{{end}}
+{{end}}

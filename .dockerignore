@@ -1,0 +1,18 @@
+# Build artifacts and local files not needed inside the image.
+titipdong
+titipdong.exe
+*.exe
+*.dll
+*.so
+*.dylib
+node_modules/
+uploads/
+*.log
+.env
+.env.*
+.git/
+.gitignore
+README.md
+prompt.txt
+# Tests don't need to ship.
+**/*_test.go

@@ -1,0 +1,47 @@
+{{define "order_card"}}
+{{$o := .o}}
+{{$wa := .waLink}}
+<div id="order-{{$o.ID}}" class="bg-white rounded-xl p-3 shadow-sm border border-slate-100">
+  <div class="flex justify-between items-start gap-2">
+    <a href="/app/orders/{{$o.ID}}" class="flex-1 min-w-0">
+      <div class="font-semibold truncate">{{$o.ItemName}}</div>
+      <div class="text-xs text-slate-500 truncate">
+        {{if $o.CustomerName}}{{$o.CustomerName}}{{else}}(no customer){{end}}
+        {{if $o.SourceStore}}· {{$o.SourceStore}}{{end}}
+      </div>
+    </a>
+    <div class="text-right shrink-0">
+      <div class="font-bold text-emerald-600">{{fmtIDR $o.SellingPriceIDR}}</div>
+      <div class="text-[10px] text-slate-400">{{fmtForeign $o.AmountForeign $o.Currency}}</div>
+    </div>
+  </div>
+
+  <div class="flex items-center gap-2 mt-2">
+    <span class="text-xs px-2 py-0.5 rounded-full {{if eq $o.Status "diantar"}}bg-emerald-100 text-emerald-700{{else if eq $o.Status "dibayar"}}bg-sky-100 text-sky-700{{else}}bg-amber-100 text-amber-700{{end}}">
+      {{statusEmoji $o.Status}} {{statusLabel $o.Status}}
+    </span>
+    {{if not $o.Paid}}<span class="text-[10px] text-rose-600">● belum bayar</span>{{else}}<span class="text-[10px] text-emerald-600">✓ lunas</span>{{end}}
+  </div>
+
+  <div class="grid grid-cols-3 gap-2 mt-3">
+    {{if isFinal $o.Status}}
+    <span class="text-xs text-slate-400 text-center py-2">Selesai 🎉</span>
+    {{else}}
+    <button hx-post="/app/orders/{{$o.ID}}/status" hx-target="#order-{{$o.ID}}" hx-swap="outerHTML"
+      class="bg-sky-500 text-white text-xs py-2 rounded-lg font-semibold">
+      → {{nextLabel $o.Status}}
+    </button>
+    {{end}}
+    <form method="post" action="/app/orders/{{$o.ID}}/paid" hx-post="/app/orders/{{$o.ID}}/paid"
+      hx-target="#order-{{$o.ID}}" hx-swap="outerHTML">
+      <button class="w-full {{if $o.Paid}}bg-slate-100 text-slate-600{{else}}bg-emerald-100 text-emerald-700{{end}} text-xs py-2 rounded-lg">
+      {{if $o.Paid}}Buka Bayar{{else}}Tandai Lunas{{end}}</button>
+    </form>
+    {{if $wa}}
+    <a href="{{$wa}}" target="_blank" class="text-center bg-emerald-500 text-white text-xs py-2 rounded-lg font-semibold">💬 WA</a>
+    {{else}}
+    <a href="/app/orders/{{$o.ID}}/wa" class="text-center bg-slate-100 text-slate-500 text-xs py-2 rounded-lg">💬 WA</a>
+    {{end}}
+  </div>
+</div>
+{{end}}

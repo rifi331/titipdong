@@ -1,0 +1,44 @@
+{{define "title"}}Pengajuan Jastiper — Admin{{end}}
+{{define "content"}}
+<h1 class="text-2xl font-bold mb-4">Pengajuan Jastiper 📝</h1>
+
+<div class="flex gap-2 mb-3 text-xs">
+  <a href="/app/admin/applications?status=pending" class="px-3 py-1 rounded-full {{if or (eq .filter "") (eq .filter "pending")}}bg-sky-500 text-white{{else}}bg-white border border-slate-200{{end}}">Menunggu</a>
+  <a href="/app/admin/applications?status=all" class="px-3 py-1 rounded-full {{if eq .filter "all"}}bg-sky-500 text-white{{else}}bg-white border border-slate-200{{end}}">Semua</a>
+</div>
+
+{{if .apps}}
+<div class="space-y-3">
+  {{range .apps}}
+  {{$st := .Status}}
+  <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-100">
+    <div class="flex justify-between items-start">
+      <div>
+        <div class="font-semibold">{{.FullName}}</div>
+        <div class="text-xs text-slate-500">{{.UserEmail}} · {{.Phone}} · {{.City}}</div>
+      </div>
+      <span class="text-xs px-2 py-0.5 rounded-full {{if eq $st "pending"}}bg-amber-100 text-amber-700{{else if eq $st "approved"}}bg-emerald-100 text-emerald-700{{else}}bg-rose-100 text-rose-700{{end}}">
+        {{$st}}
+      </span>
+    </div>
+    <div class="text-sm mt-2"><b>KTP:</b> {{.KTPNumber}}</div>
+    {{if .KTPPhotoPath}}<img src="/uploads/{{.KTPPhotoPath}}" class="mt-2 max-h-48 rounded-lg border border-slate-200">{{end}}
+    {{if .AdminNote}}<div class="text-xs text-slate-500 mt-2">Catatan: {{.AdminNote}}</div>{{end}}
+
+    {{if eq $st "pending"}}
+    <div class="flex gap-2 mt-3">
+      <form method="post" action="/app/admin/applications/{{.ID}}/approve">
+        <button class="bg-emerald-500 text-white text-sm px-4 py-2 rounded-lg">✓ Setujui</button>
+      </form>
+      <form method="post" action="/app/admin/applications/{{.ID}}/reject" class="flex-1 flex gap-2">
+        <input name="note" placeholder="Alasan (opsional)"
+          class="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm">
+        <button class="bg-rose-500 text-white text-sm px-4 py-2 rounded-lg">✗ Tolak</button>
+      </form>
+    </div>
+    {{end}}
+  </div>
+  {{end}}
+</div>
+{{else}}<p class="text-sm text-slate-500">Tidak ada pengajuan.</p>{{end}}
+{{end}}

@@ -1,0 +1,39 @@
+{{define "title"}}Trip — TitipDong{{end}}
+{{define "content"}}
+<div class="flex items-center justify-between mb-4">
+  <h1 class="text-2xl font-bold">Trip ✈️</h1>
+  <button onclick="document.getElementById('newt').classList.toggle('hidden')"
+    class="bg-sky-500 text-white text-sm px-3 py-2 rounded-lg">+ Trip Baru</button>
+</div>
+
+<form id="newt" method="post" action="/app/trips" class="hidden bg-white p-4 rounded-xl shadow-sm mb-4 space-y-2">
+  <input name="name" placeholder="Nama trip (cth: Tokyo Juli 2026)"
+    class="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-sky-500">
+  <div class="grid grid-cols-2 gap-2">
+    <input name="country" placeholder="Negara (Jepang)"
+      class="rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-sky-500">
+    <select name="currency" class="rounded-lg border border-slate-300 px-3 py-2">
+      {{range .supportedCurrencies}}<option value="{{.}}">{{.}}</option>{{end}}
+    </select>
+  </div>
+  <div class="grid grid-cols-2 gap-2">
+    <input name="start_date" type="date" class="rounded-lg border border-slate-300 px-3 py-2">
+    <input name="end_date" type="date" class="rounded-lg border border-slate-300 px-3 py-2">
+  </div>
+  <button class="bg-sky-500 text-white px-4 py-2 rounded-lg">Simpan</button>
+</form>
+
+{{if .trips}}
+<div class="space-y-2">
+  {{range .trips}}
+  <a href="/app/trips/{{.ID}}" class="block bg-white rounded-xl p-3 shadow-sm border border-slate-100">
+    <div class="flex justify-between">
+      <div class="font-medium">{{.Name}}</div>
+      {{if eq .Status "active"}}<span class="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">Aktif</span>{{else}}<span class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">Selesai</span>{{end}}
+    </div>
+    <div class="text-xs text-slate-500 mt-1">{{.Country}} · {{.Currency}}</div>
+  </a>
+  {{end}}
+</div>
+{{else}}<p class="text-sm text-slate-500">Belum ada trip. Buat trip pertama-mu untuk mulai catat order!</p>{{end}}
+{{end}}

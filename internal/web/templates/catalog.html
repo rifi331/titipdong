@@ -1,0 +1,59 @@
+{{define "title"}}Katalog — TitipDong{{end}}
+{{define "content"}}
+{{$u := .currentUser}}
+<h1 class="text-2xl font-bold mb-4">Katalog 🛒</h1>
+
+{{if or (eq $u.Role "jastiper") (eq $u.Role "admin")}}
+<div class="bg-white rounded-xl p-4 shadow-sm mb-4">
+  <h2 class="font-semibold mb-2">+ Item Baru</h2>
+  <form method="post" action="/app/catalog" enctype="multipart/form-data" class="space-y-2">
+    <input name="title" placeholder="Nama item" required
+      class="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-sky-500">
+    <textarea name="description" placeholder="Deskripsi singkat"
+      class="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-sky-500"></textarea>
+    <div class="grid grid-cols-2 gap-2">
+      <input name="est_price_foreign" inputmode="decimal" placeholder="Estimasi harga"
+        class="rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-sky-500">
+      <select name="currency" class="rounded-lg border border-slate-300 px-2 py-2">
+        {{range .supportedCurrencies}}<option value="{{.}}">{{.}}</option>{{end}}
+      </select>
+    </div>
+    <input type="file" name="photo" accept="image/*" capture="environment" class="w-full text-sm">
+    <button class="bg-sky-500 text-white px-4 py-2 rounded-lg">Tambah Item</button>
+  </form>
+</div>
+
+{{if .mine}}
+<h2 class="font-semibold mb-2">Item-mu</h2>
+<div class="grid grid-cols-2 gap-3 mb-4">
+  {{range .mine}}
+  <div class="bg-white rounded-xl overflow-hidden shadow-sm border border-slate-100">
+    {{if .PhotoPath}}<img src="/uploads/{{.PhotoPath}}" class="w-full h-32 object-cover">{{else}}<div class="w-full h-32 bg-slate-100 flex items-center justify-center text-3xl">🛍️</div>{{end}}
+    <div class="p-2">
+      <div class="font-medium text-sm truncate">{{.Title}}</div>
+      <div class="text-xs text-slate-500">{{currencySym .Currency}}{{printf "%.0f" .EstPriceForeign}}</div>
+      <form method="post" action="/app/catalog/{{.ID}}/delete" onsubmit="return confirm('Hapus item?')">
+        <button class="text-xs text-rose-600 mt-1">Hapus</button>
+      </form>
+    </div>
+  </div>
+  {{end}}
+</div>
+{{end}}
+{{end}}
+
+<h2 class="font-semibold mb-2">Semua Item</h2>
+{{if .public}}
+<div class="grid grid-cols-2 gap-3">
+  {{range .public}}
+  <div class="bg-white rounded-xl overflow-hidden shadow-sm border border-slate-100">
+    {{if .PhotoPath}}<img src="/uploads/{{.PhotoPath}}" class="w-full h-32 object-cover">{{else}}<div class="w-full h-32 bg-slate-100 flex items-center justify-center text-3xl">🛍️</div>{{end}}
+    <div class="p-2">
+      <div class="font-medium text-sm truncate">{{.Title}}</div>
+      <div class="text-xs text-slate-500">{{.JastiperName}} · {{currencySym .Currency}}{{printf "%.0f" .EstPriceForeign}}</div>
+    </div>
+  </div>
+  {{end}}
+</div>
+{{else}}<p class="text-sm text-slate-500">Belum ada item di katalog.</p>{{end}}
+{{end}}

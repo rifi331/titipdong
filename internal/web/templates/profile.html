@@ -1,0 +1,65 @@
+{{define "title"}}Profil — TitipDong{{end}}
+{{define "content"}}
+{{$u := .currentUser}}
+<h1 class="text-2xl font-bold mb-4">Profil 👤</h1>
+
+<div class="bg-white rounded-xl shadow-sm p-4 mb-4">
+  <div class="flex justify-between items-start">
+    <div>
+      <div class="font-semibold text-lg">{{$u.DisplayName}}</div>
+      <div class="text-sm text-slate-500">{{$u.Email}}</div>
+    </div>
+    <span class="text-xs uppercase tracking-wide bg-slate-100 px-2 py-1 rounded-full">
+      {{if eq $u.Role "admin"}}Admin{{else if eq $u.Role "jastiper"}}Jastiper{{else}}Buyer{{end}}
+    </span>
+  </div>
+</div>
+
+{{if eq $u.Role "buyer"}}
+  {{if .hasApp}}
+    {{$st := .app.Status}}
+    <div class="rounded-xl p-4 mb-4 shadow-sm {{if eq $st "pending"}}bg-amber-50{{else if eq $st "approved"}}bg-emerald-50{{else}}bg-rose-50}}">
+      <div class="font-semibold mb-1">
+        Pengajuan Jastiper: {{if eq $st "pending"}}⏳ Menunggu Admin{{else if eq $st "approved"}}✅ Disetujui{{else}}❌ Ditolak{{end}}
+      </div>
+      {{if .app.AdminNote}}<div class="text-sm text-slate-600">Catatan admin: {{.app.AdminNote}}</div>{{end}}
+      {{if eq $st "rejected"}}
+        <p class="text-sm mt-2">Boleh ajukan ulang kapan saja lewat form di bawah.</p>
+      {{end}}
+    </div>
+  {{end}}
+
+  {{if or (not .hasApp) (eq .app.Status "rejected")}}
+  <h2 class="font-semibold mb-2">Ajukan Jadi Jastiper 📝</h2>
+  {{if .error}}<div class="mb-3 rounded-lg bg-red-50 text-red-700 px-3 py-2 text-sm">{{.error}}</div>{{end}}
+  <form method="post" action="/app/profile/become-jastiper" enctype="multipart/form-data" class="space-y-3 bg-white p-4 rounded-xl shadow-sm">
+    <label class="block">
+      <span class="text-sm text-slate-600">Nama lengkap (sesuai KTP)</span>
+      <input type="text" name="full_name" required
+        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-sky-500">
+    </label>
+    <label class="block">
+      <span class="text-sm text-slate-600">Nomor KTP (16 digit)</span>
+      <input type="text" name="ktp_number" inputmode="numeric" pattern="[0-9]{16}" required
+        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-sky-500">
+    </label>
+    <label class="block">
+      <span class="text-sm text-slate-600">Foto KTP</span>
+      <input type="file" name="ktp_photo" accept="image/*" capture="environment"
+        class="mt-1 w-full text-sm">
+    </label>
+    <label class="block">
+      <span class="text-sm text-slate-600">Nomor HP / WhatsApp</span>
+      <input type="tel" name="phone" placeholder="0812xxxx"
+        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-sky-500">
+    </label>
+    <label class="block">
+      <span class="text-sm text-slate-600">Kota domisili</span>
+      <input type="text" name="city"
+        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-sky-500">
+    </label>
+    <button class="w-full bg-sky-500 hover:bg-sky-600 text-white font-semibold py-2.5 rounded-lg">Kirim Pengajuan</button>
+  </form>
+  {{end}}
+{{end}}
+{{end}}

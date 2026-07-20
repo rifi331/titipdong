@@ -1,0 +1,30 @@
+{{define "title"}}User — Admin{{end}}
+{{define "content"}}
+<h1 class="text-2xl font-bold mb-4">Manajemen User 👥</h1>
+{{if .users}}
+<div class="bg-white rounded-xl shadow-sm divide-y divide-slate-100">
+  {{range .users}}
+  {{$r := .Role}}
+  <div class="p-3">
+    <div class="flex justify-between items-start">
+      <div>
+        <div class="font-medium">{{.DisplayName}} <span class="text-xs text-slate-400">({{.Email}})</span></div>
+        <div class="text-xs text-slate-500">{{.CreatedAt}}</div>
+      </div>
+      <span class="text-xs px-2 py-0.5 rounded-full {{if eq $r "admin"}}bg-sky-100 text-sky-700{{else if eq $r "jastiper"}}bg-emerald-100 text-emerald-700{{else}}bg-slate-100 text-slate-600{{end}}">
+        {{if eq $r "admin"}}Admin{{else if eq $r "jastiper"}}Jastiper{{else}}Buyer{{end}}
+      </span>
+    </div>
+    <form method="post" action="/app/admin/users/{{.ID}}/role" class="mt-2 flex gap-2 text-xs">
+      <select name="role" class="rounded border border-slate-300 px-2 py-1">
+        <option value="buyer" {{if eq $r "buyer"}}selected{{end}}>Buyer</option>
+        <option value="jastiper" {{if eq $r "jastiper"}}selected{{end}}>Jastiper</option>
+        <option value="admin" {{if eq $r "admin"}}selected{{end}}>Admin</option>
+      </select>
+      <button class="bg-sky-500 text-white px-3 py-1 rounded">Ubah</button>
+    </form>
+  </div>
+  {{end}}
+</div>
+{{else}}<p class="text-sm text-slate-500">Belum ada user terdaftar.</p>{{end}}
+{{end}}

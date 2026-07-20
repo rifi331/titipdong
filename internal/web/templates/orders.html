@@ -1,0 +1,23 @@
+{{define "title"}}Order — TitipDong{{end}}
+{{define "content"}}
+<div class="flex items-center justify-between mb-3">
+  <h1 class="text-2xl font-bold">Order 📦</h1>
+  <a href="/app/orders/new" class="bg-sky-500 text-white text-sm px-3 py-2 rounded-lg">+ Baru</a>
+</div>
+
+<div class="flex gap-2 overflow-x-auto pb-2 mb-3 text-xs">
+  <a href="/app/orders" class="whitespace-nowrap px-3 py-1 rounded-full {{if not .filter.Status}}bg-sky-500 text-white{{else}}bg-white border border-slate-200{{end}}">Semua</a>
+  <a href="/app/orders?status=dicari" class="whitespace-nowrap px-3 py-1 rounded-full bg-white border border-slate-200">🔍 Dicari</a>
+  <a href="/app/orders?status=ketemu" class="whitespace-nowrap px-3 py-1 rounded-full bg-white border border-slate-200">✅ Ketemu</a>
+  <a href="/app/orders?status=dibeli" class="whitespace-nowrap px-3 py-1 rounded-full bg-white border border-slate-200">🛍️ Dibeli</a>
+  <a href="/app/orders?unpaid=1" class="whitespace-nowrap px-3 py-1 rounded-full bg-white border border-slate-200">💵 Belum Bayar</a>
+</div>
+
+{{if .orders}}
+<div id="order-list" class="space-y-2">
+  {{range .orders}}
+    {{template "order_card" dict "o" . "waLink" ""}}
+  {{end}}
+</div>
+{{else}}<p class="text-sm text-slate-500">Belum ada order. Ketuk <b>+ Baru</b> untuk tambah.</p>{{end}}
+{{end}}

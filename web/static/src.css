@@ -1,0 +1,18 @@
+/* TitipDong source stylesheet — compiled by Tailwind CLI into ../app.css.
+   The @tailwind directives expand to the framework's base/components/utilities. */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Make tap targets friendly on mobile. */
+@layer base {
+  button, a { -webkit-tap-highlight-color: transparent; }
+}
+
+/* line-clamp helper used by some cards. */
+.line-clamp-1 {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

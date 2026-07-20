@@ -1,0 +1,32 @@
+{{define "title"}}Customer — TitipDong{{end}}
+{{define "content"}}
+<div class="flex items-center justify-between mb-4">
+  <h1 class="text-2xl font-bold">Customer 👥</h1>
+  <button onclick="document.getElementById('newc').classList.toggle('hidden')"
+    class="bg-sky-500 text-white text-sm px-3 py-2 rounded-lg">+ Tambah</button>
+</div>
+
+<form id="newc" method="post" action="/app/customers" class="hidden bg-white p-4 rounded-xl shadow-sm mb-4 space-y-2">
+  <input name="name" placeholder="Nama customer" required
+    class="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-sky-500">
+  <input name="whatsapp" placeholder="No. WhatsApp (08xx / 62xxx)" inputmode="tel"
+    class="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-sky-500">
+  <textarea name="notes" placeholder="Catatan: item favorit, preferensi kirim..."
+    class="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-sky-500"></textarea>
+  <button class="bg-sky-500 text-white px-4 py-2 rounded-lg">Simpan</button>
+</form>
+
+{{if .customers}}
+<div class="space-y-2">
+  {{range .customers}}
+  <a href="/app/customers/{{.ID}}" class="block bg-white rounded-xl p-3 shadow-sm border border-slate-100">
+    <div class="flex justify-between">
+      <div class="font-medium">{{.Name}}</div>
+      {{if .WhatsApp}}<span class="text-xs text-emerald-600">💬 {{.WhatsApp}}</span>{{end}}
+    </div>
+    {{if .Notes}}<div class="text-xs text-slate-500 mt-1 line-clamp-1">{{.Notes}}</div>{{end}}
+  </a>
+  {{end}}
+</div>
+{{else}}<p class="text-sm text-slate-500">Belum ada customer. Tambahkan yang pertama!</p>{{end}}
+{{end}}

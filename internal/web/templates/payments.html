@@ -1,0 +1,37 @@
+{{define "title"}}Pembayaran — TitipDong{{end}}
+{{define "content"}}
+{{$s := .summary}}
+<h1 class="text-2xl font-bold mb-4">Pembayaran 💵</h1>
+
+<div class="grid grid-cols-2 gap-3 mb-4">
+  <div class="bg-white rounded-xl p-3 shadow-sm">
+    <div class="text-xs text-slate-500">Sudah Dibayar</div>
+    <div class="text-lg font-bold text-emerald-600">{{fmtIDR (subtract $s.RevenueIDR $s.OutstandingIDR)}}</div>
+    <div class="text-xs text-slate-400">{{$s.PaidCount}} order</div>
+  </div>
+  <div class="bg-white rounded-xl p-3 shadow-sm">
+    <div class="text-xs text-slate-500">Belum Dibayar</div>
+    <div class="text-lg font-bold text-rose-600">{{fmtIDR $s.OutstandingIDR}}</div>
+    <div class="text-xs text-slate-400">{{$s.UnpaidCount}} order</div>
+  </div>
+</div>
+
+<h2 class="font-semibold mb-2">Per Customer</h2>
+{{if .breakdown}}
+<div class="bg-white rounded-xl shadow-sm divide-y divide-slate-100">
+  {{range .breakdown}}
+  <div class="p-3">
+    <div class="flex justify-between">
+      <div class="font-medium">{{.CustomerName}}</div>
+      <div class="font-semibold">{{fmtIDR .TotalIDR}}</div>
+    </div>
+    {{if gt .Outstanding 0}}
+    <div class="text-sm text-rose-600 mt-1">Belum dibayar: {{fmtIDR .Outstanding}} (dari {{.OrderCount}} order)</div>
+    {{else}}
+    <div class="text-sm text-emerald-600 mt-1">✓ Lunas ({{.OrderCount}} order)</div>
+    {{end}}
+  </div>
+  {{end}}
+</div>
+{{else}}<p class="text-sm text-slate-500">Belum ada data pembayaran.</p>{{end}}
+{{end}}

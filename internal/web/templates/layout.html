@@ -1,0 +1,90 @@
+{{define "layout.html"}}<!doctype html>
+<html lang="id" class="h-full">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+  <meta name="theme-color" content="#0ea5e9">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <title>{{block "title" .}}TitipDong{{end}}</title>
+  <link rel="stylesheet" href="/static/app.css">
+  <script src="/static/htmx.min.js" defer></script>
+  <script src="/static/alpine.min.js" defer></script>
+</head>
+<body class="h-full bg-slate-50 text-slate-800 antialiased pb-20">
+<div class="min-h-full flex flex-col">
+
+  {{block "topbar" .}}
+  <header class="sticky top-0 z-30 bg-sky-500 text-white shadow-sm">
+    <div class="max-w-xl mx-auto px-4 py-3 flex items-center gap-3">
+      <a href="/app" class="flex items-center gap-2 font-bold text-lg">
+        <span>🛍️</span><span>TitipDong</span>
+      </a>
+      <div class="ml-auto flex items-center gap-3 text-sm">
+        {{if .currentUser}}
+          {{template "role_badge" .currentUser}}
+          <a href="/app/profile" class="hover:underline">{{if .currentUser.DisplayName}}{{.currentUser.DisplayName}}{{else}}{{.currentUser.Email}}{{end}}</a>
+          <form method="post" action="/logout" class="inline">
+            <button class="underline opacity-90">Keluar</button>
+          </form>
+        {{else}}
+          <a href="/login" class="hover:underline">Masuk</a>
+          <a href="/signup" class="bg-white/20 px-3 py-1 rounded-full hover:bg-white/30">Daftar</a>
+        {{end}}
+      </div>
+    </div>
+  </header>
+  {{end}}
+
+  <main class="flex-1 max-w-xl w-full mx-auto px-4 py-4">
+    {{block "content" .}}{{end}}
+  </main>
+
+  {{block "bottomnav" .}}
+  {{if .currentUser}}
+  <nav class="fixed bottom-0 inset-x-0 z-30 bg-white border-t border-slate-200 pb-[env(safe-area-inset-bottom)]">
+    <div class="max-w-xl mx-auto grid grid-cols-6 text-xs">
+      {{$role := .currentUser.Role}}
+      <a href="/app" class="flex flex-col items-center py-2 text-slate-600 hover:text-sky-600">
+        <span class="text-lg">🏠</span><span>Beranda</span>
+      </a>
+      <a href="/app/catalog" class="flex flex-col items-center py-2 text-slate-600 hover:text-sky-600">
+        <span class="text-lg">🛒</span><span>Katalog</span>
+      </a>
+      {{if or (eq $role "jastiper") (eq $role "admin")}}
+      <a href="/app/orders" class="flex flex-col items-center py-2 text-slate-600 hover:text-sky-600">
+        <span class="text-lg">📦</span><span>Order</span>
+      </a>
+      <a href="/app/customers" class="flex flex-col items-center py-2 text-slate-600 hover:text-sky-600">
+        <span class="text-lg">👥</span><span>Customer</span>
+      </a>
+      <a href="/app/payments" class="flex flex-col items-center py-2 text-slate-600 hover:text-sky-600">
+        <span class="text-lg">💵</span><span>Bayar</span>
+      </a>
+      {{end}}
+      {{if eq $role "admin"}}
+      <a href="/app/admin/applications" class="flex flex-col items-center py-2 text-slate-600 hover:text-sky-600">
+        <span class="text-lg">🛡️</span><span>Admin</span>
+      </a>
+      {{end}}
+    </div>
+  </nav>
+  {{end}}
+  {{end}}
+
+</div>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(()=>{}));
+  }
+</script>
+</body>
+</html>
+{{end}}
+
+{{define "role_badge"}}
+  {{$r := .Role}}
+  <span class="text-[10px] uppercase tracking-wide bg-white/20 px-2 py-0.5 rounded-full">
+    {{if eq $r "admin"}}Admin{{else if eq $r "jastiper"}}Jastiper{{else}}Buyer{{end}}
+  </span>
+{{end}}

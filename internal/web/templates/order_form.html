@@ -1,0 +1,99 @@
+{{define "title"}}{{if .order}}Edit Order{{else}}Order Baru{{end}} — TitipDong{{end}}
+{{define "content"}}
+{{$o := .order}}
+{{$sr := .scanResult}}
+<a href="/app/orders" class="text-sm text-sky-600">← Daftar Order</a>
+<h1 class="text-2xl font-bold mt-1 mb-4">{{if $o}}Edit Order{{else}}Order Baru 📝{{end}}</h1>
+
+{{if $sr}}
+<div class="bg-sky-50 border border-sky-200 text-sky-800 text-sm rounded-xl p-3 mb-3">
+  📸 Dari scan struk: <b>{{$sr.Item}}</b> · {{$sr.Store}} · {{currencySym $sr.Currency}}{{printf "%.0f" $sr.Amount}}
+</div>
+{{end}}
+
+<form method="post" action="{{if $o}}/app/orders/{{$o.ID}}{{else}}/app/orders{{end}}"
+  enctype="multipart/form-data" class="space-y-3 bg-white p-4 rounded-xl shadow-sm">
+
+  <label class="block">
+    <span class="text-sm text-slate-600">Nama item *</span>
+    <input name="item_name" value="{{if $o}}{{$o.ItemName}}{{else}}{{$sr.Item}}{{end}}" required
+      class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-sky-500">
+  </label>
+
+  <label class="block">
+    <span class="text-sm text-slate-600">Toko sumber</span>
+    <input name="source_store" value="{{if $o}}{{$o.SourceStore}}{{else}}{{$sr.Store}}{{end}}" placeholder="Don Quijote, Matsumoto Kiyoshi..."
+      class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-sky-500">
+  </label>
+
+  <div class="grid grid-cols-3 gap-2">
+    <label class="col-span-1">
+      <span class="text-sm text-slate-600">Mata uang</span>
+      <select name="currency" class="mt-1 w-full rounded-lg border border-slate-300 px-2 py-2">
+        {{$cur := firstNonEmpty $o.Currency $sr.Currency "JPY"}}
+        {{range .supportedCurrencies}}
+        <option value="{{.}}" {{if eq . $cur}}selected{{end}}>{{.}}</option>
+        {{end}}
+      </select>
+    </label>
+    <label class="col-span-2">
+      <span class="text-sm text-slate-600">Harga (mata uang asal)</span>
+      <input name="amount_foreign" inputmode="decimal"
+        value="{{if $o}}{{printf "%.0f" $o.AmountForeign}}{{else}}{{if $sr.Amount}}{{printf "%.0f" $sr.Amount}}{{end}}{{end}}"
+        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-sky-500">
+    </label>
+  </div>
+
+  <label class="block">
+    <span class="text-sm text-slate-600">Markup (%)</span>
+    <input name="markup_pct" inputmode="decimal"
+      value="{{if $o}}{{fmt2 $o.MarkupPct}}{{else}}20{{end}}"
+      class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-sky-500">
+    <span class="text-xs text-slate-400">Harga jual otomatis dihitung: modal IDR × (1 + markup%)</span>
+  </label>
+
+  <div class="grid grid-cols-2 gap-2">
+    <label>
+      <span class="text-sm text-slate-600">Customer</span>
+      <select name="customer_id" class="mt-1 w-full rounded-lg border border-slate-300 px-2 py-2">
+        <option value="">— pilih —</option>
+        {{range .customers}}
+        <option value="{{.ID}}" {{if $o}}{{if eq .ID (deref $o.CustomerID)}}selected{{end}}{{end}}>{{.Name}}</option>
+        {{end}}
+      </select>
+    </label>
+    <label>
+      <span class="text-sm text-slate-600">Trip</span>
+      <select name="trip_id" class="mt-1 w-full rounded-lg border border-slate-300 px-2 py-2">
+        <option value="">— pilih —</option>
+        {{range .trips}}
+        <option value="{{.ID}}" {{if $o}}{{if eq .ID (deref $o.TripID)}}selected{{end}}{{end}}>{{.Name}}</option>
+        {{end}}
+      </select>
+    </label>
+  </div>
+
+  {{if $o}}{{if $o.PhotoPath}}
+  <div><img src="/uploads/{{$o.PhotoPath}}" class="h-24 rounded-lg"></div>
+  {{end}}{{end}}
+
+  <label class="block">
+    <span class="text-sm text-slate-600">Foto item (opsional)</span>
+    <input type="file" name="photo" accept="image/*" capture="environment" class="mt-1 w-full text-sm">
+    {{if $o}}{{if $o.PhotoPath}}<input type="hidden" name="existing_photo" value="{{$o.PhotoPath}}">{{end}}{{end}}
+  </label>
+
+  <label class="block">
+    <span class="text-sm text-slate-600">Catatan</span>
+    <textarea name="note" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-sky-500">{{if $o}}{{$o.Note}}{{end}}</textarea>
+  </label>
+
+  <button class="w-full bg-sky-500 hover:bg-sky-600 text-white font-semibold py-2.5 rounded-lg">Simpan</button>
+</form>
+
+{{if $o}}
+<form method="post" action="/app/orders/{{$o.ID}}/delete" class="mt-3" onsubmit="return confirm('Hapus order ini?')">
+  <button class="w-full text-rose-600 border border-rose-200 py-2 rounded-lg">Hapus</button>
+</form>
+{{end}}
+{{end}}

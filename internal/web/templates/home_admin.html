@@ -1,0 +1,36 @@
+{{define "title"}}Beranda Admin — TitipDong{{end}}
+{{define "content"}}
+<h1 class="text-2xl font-bold mb-4">Panel Admin 🛡️</h1>
+
+<div class="grid grid-cols-2 gap-3 mb-4">
+  <a href="/app/admin/applications" class="bg-amber-50 border border-amber-200 rounded-xl p-4 shadow-sm">
+    <div class="text-2xl">📝</div>
+    <div class="font-semibold mt-1">Pengajuan Jastiper</div>
+    {{if .pending}}<div class="text-xs text-amber-700 mt-1">{{len .pending}} menunggu review</div>{{else}}<div class="text-xs text-slate-500 mt-1">Tidak ada antrian</div>{{end}}
+  </a>
+  <a href="/app/admin/users" class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+    <div class="text-2xl">👥</div>
+    <div class="font-semibold mt-1">Manajemen User</div>
+  </a>
+</div>
+
+<div class="grid grid-cols-2 gap-3 mb-6">
+  <a href="/app/orders" class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+    <div class="text-2xl">📦</div><div class="font-semibold mt-1">Order</div>
+  </a>
+  <a href="/app/summary" class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+    <div class="text-2xl">📊</div><div class="font-semibold mt-1">Ringkasan</div>
+  </a>
+</div>
+
+<h2 class="font-semibold mb-2">Pengajuan Menunggu</h2>
+{{if .pending}}
+{{range .pending}}
+<div class="bg-white rounded-xl p-3 mb-2 shadow-sm border border-slate-100">
+  <div class="font-medium">{{.FullName}}</div>
+  <div class="text-xs text-slate-500">{{.UserEmail}} · {{.City}}</div>
+  <a href="/app/admin/applications" class="text-xs text-sky-600">Tinjau →</a>
+</div>
+{{end}}
+{{else}}<p class="text-sm text-slate-500">Tidak ada pengajuan menunggu.</p>{{end}}
+{{end}}

@@ -1,0 +1,43 @@
+{{define "title"}}Beranda — TitipDong{{end}}
+{{define "content"}}
+{{$u := .currentUser}}
+{{$s := .summary}}
+<h1 class="text-2xl font-bold mb-1">Halo, {{$u.DisplayName}}! 👋</h1>
+<p class="text-sm text-slate-600 mb-4">Ringkasan bisnis jastip-mu hari ini.</p>
+
+<div class="grid grid-cols-2 gap-3 mb-4">
+  <div class="bg-white rounded-xl p-4 shadow-sm">
+    <div class="text-xs text-slate-500">Total Order</div>
+    <div class="text-2xl font-bold">{{$s.OrderCount}}</div>
+  </div>
+  <div class="bg-white rounded-xl p-4 shadow-sm">
+    <div class="text-xs text-slate-500">Omzet</div>
+    <div class="text-xl font-bold text-emerald-600">{{fmtIDR $s.RevenueIDR}}</div>
+  </div>
+  <div class="bg-white rounded-xl p-4 shadow-sm">
+    <div class="text-xs text-slate-500">Margin Bersih</div>
+    <div class="text-xl font-bold text-sky-600">{{fmtIDR $s.NetMarginIDR}}</div>
+  </div>
+  <div class="bg-white rounded-xl p-4 shadow-sm">
+    <div class="text-xs text-slate-500">Belum Dibayar</div>
+    <div class="text-xl font-bold text-rose-600">{{fmtIDR $s.OutstandingIDR}}</div>
+  </div>
+</div>
+
+<div class="grid grid-cols-2 gap-3 mb-6">
+  <a href="/app/orders/new" class="bg-sky-500 text-white rounded-xl p-4 text-center font-semibold shadow-sm">+ Order Baru</a>
+  <a href="/app/scan" class="bg-white border border-slate-200 rounded-xl p-4 text-center font-semibold shadow-sm">📸 Scan Struk</a>
+</div>
+
+<h2 class="font-semibold mb-2">Trip Aktif</h2>
+{{if .trips}}
+{{range .trips}}{{if eq .Status "active"}}
+<a href="/app/trips/{{.ID}}" class="block bg-white rounded-xl p-3 mb-2 shadow-sm border border-slate-100">
+  <div class="font-medium">{{.Name}}</div>
+  <div class="text-xs text-slate-500">{{.Country}} · {{.Currency}}</div>
+</a>
+{{end}}{{end}}
+{{else}}
+<p class="text-sm text-slate-500">Belum ada trip. <a href="/app/trips" class="text-sky-600 underline">Buat trip pertama-mu</a>.</p>
+{{end}}
+{{end}}
