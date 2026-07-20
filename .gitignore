@@ -1,6 +1,6 @@
-# Binaries
-titipdong
-titipdong.exe
+# Binaries — anchored to repo root so we don't ignore cmd/titipdong/.
+/titipdong
+/titipdong.exe
 *.exe
 *.exe~
 *.dll
