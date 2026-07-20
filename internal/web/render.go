@@ -5,6 +5,7 @@ import (
 	"embed"
 	"fmt"
 	"html/template"
+	"log"
 	"math"
 	"net/http"
 	"strings"
@@ -247,8 +248,9 @@ func (s *Server) render(w http.ResponseWriter, r *http.Request, name string, dat
 	}
 	data["supportedCurrencies"] = currency.Supported
 	tmpl, err := template.New("").Funcs(templateFuncs).ParseFS(templateFS,
-		"templates/layout.html", "templates/"+name)
+		"templates/layout.html", "templates/"+name, "templates/partials/*.html")
 	if err != nil {
+		log.Printf("template parse error (%s): %v", name, err)
 		http.Error(w, "template parse error", http.StatusInternalServerError)
 		return
 	}
@@ -258,7 +260,9 @@ func (s *Server) render(w http.ResponseWriter, r *http.Request, name string, dat
 	}
 	w.WriteHeader(code)
 	if err := tmpl.ExecuteTemplate(w, "layout.html", data); err != nil {
-		// Best-effort; header already sent.
+		// Best-effort; header already sent, but at least log so blank pages
+		// (response already started, then failed mid-stream) are debuggable.
+		log.Printf("template exec error (%s): %v", name, err)
 		_ = err
 	}
 }

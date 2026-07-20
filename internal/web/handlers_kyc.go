@@ -1,6 +1,7 @@
 package web
 
 import (
+	"errors"
 	"net/http"
 	"strings"
 	"time"
@@ -141,6 +142,11 @@ func (s *Server) handleAdminApprove(w http.ResponseWriter, r *http.Request) {
 	u, _ := auth.UserFrom(r)
 	id := pathInt64(r, "id")
 	if err := s.kyc.Decide(r.Context(), id, u.ID, true, ""); err != nil {
+		if errors.Is(err, kyc.ErrAlreadyProcessed) {
+			// Idempotent: application already approved/rejected, just go back to list.
+			http.Redirect(w, r, "/app/admin/applications", http.StatusSeeOther)
+			return
+		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -152,6 +158,10 @@ func (s *Server) handleAdminReject(w http.ResponseWriter, r *http.Request) {
 	id := pathInt64(r, "id")
 	note := strings.TrimSpace(r.FormValue("note"))
 	if err := s.kyc.Decide(r.Context(), id, u.ID, false, note); err != nil {
+		if errors.Is(err, kyc.ErrAlreadyProcessed) {
+			http.Redirect(w, r, "/app/admin/applications", http.StatusSeeOther)
+			return
+		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

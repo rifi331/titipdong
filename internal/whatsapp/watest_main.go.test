@@ -1,0 +1,26 @@
+package main
+import (
+  "fmt"
+  "github.com/titipdong/titipdong/internal/orders"
+  "github.com/titipdong/titipdong/internal/whatsapp"
+)
+func main() {
+  // T10.1 phone normalization
+  for _, in := range []string{"+62 812-3456-7890","081234567890","62 812 3456 7890"} {
+    fmt.Printf("  Normalize(%q) = %q\n", in, whatsapp.Normalize(in))
+  }
+  // T10.3 format IDR compact
+  for _, v := range []float64{366000, 1500000, 500} {
+    fmt.Printf("  FormatIDR(%v) = %q\n", v, whatsapp.FormatIDR(v))
+  }
+  // T10.2 message per status
+  for _, st := range []orders.Status{orders.StatusKetemu, orders.StatusDibeli, orders.StatusDibayar, orders.StatusDiantar} {
+    fmt.Printf("  [%s] %s\n", st, whatsapp.Message("Bu Yuni", "Hada Labo", st, 238000))
+  }
+  // T10.6 greeting
+  for _, n := range []string{"", "Yuni", "Bu Yuni", "Pak Budi"} {
+    fmt.Printf("  greeting(%q) = %q\n", n, whatsapp.Message(n, "X", orders.StatusKetemu, 0))
+  }
+  // T10.1 link generation
+  fmt.Printf("  LINK: %s\n", whatsapp.ComposeLink("081234567890", "Bu Yuni", "Hada Labo", orders.StatusKetemu, 238000))
+}

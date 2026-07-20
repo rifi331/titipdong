@@ -3,8 +3,10 @@ package kyc
 
 import (
 	"context"
+	"errors"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -16,6 +18,10 @@ const (
 	StatusApproved Status = "approved"
 	StatusRejected Status = "rejected"
 )
+
+// ErrAlreadyProcessed is returned by Decide when the application is no longer
+// pending (already approved or rejected). Lets callers handle it idempotently.
+var ErrAlreadyProcessed = errors.New("application already processed")
 
 // Application is the KYC form a buyer submits to become a jastiper.
 type Application struct {
@@ -151,6 +157,11 @@ func (s *Store) Decide(ctx context.Context, appID, reviewerID int64, approve boo
 		WHERE id = $4 AND status = 'pending'
 		RETURNING user_id`, string(status), reviewerID, note, appID).Scan(&userID)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			// WHERE status='pending' matched nothing — app already approved/rejected.
+			_ = tx.Rollback(ctx)
+			return ErrAlreadyProcessed
+		}
 		return err
 	}
 	if approve {
