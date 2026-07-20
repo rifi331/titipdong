@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+# Pre-commit hook: block accidental commits of secrets, private IPs, and emails.
+#
+# Install (run once per clone):
+#   git config core.hooksPath scripts/git-hooks
+#   chmod +x scripts/git-hooks/pre-commit
+#
+# Bypass for a single commit (use sparingly):
+#   git commit --no-verify
+
+set -euo pipefail
+
+# Collect staged additions/modifications (excluding deletions).
+STAGED=$(git diff --cached --name-only --diff-filter=AM | grep -vE '^(node_modules/|vendor/|\.git/)' || true)
+
+if [ -z "$STAGED" ]; then
+    exit 0
+fi
+
+errors=0
+
+# Patterns that should never be committed.
+# Each entry: "pattern<TAB>description"
+PATTERNS=(
+    # Private network IPs (RFC 1918) — your LAN topology is private.
+    '192\.168\.[0-9]+\.[0-9]+	"private IP 192.168.x.x (use __TRUENAS_IP__ placeholder)"'
+    '10\.[0-9]+\.[0-9]+\.[0-9]+	"private IP 10.x.x.x"'
+    '172\.(1[6-9]|2[0-9]|3[0-1])\.[0-9]+\.[0-9]+	"private IP 172.16-31.x.x"'
+    # Common API key prefixes.
+    'sk-[a-zA-Z0-9]{20,}	"OpenAI API key (sk-...)"'
+    'sk-proj-[a-zA-Z0-9_-]{20,}	"OpenAI project key (sk-proj-...)"'
+    'ghp_[a-zA-Z0-9]{36,}	"GitHub personal access token (ghp_...)"'
+    'gho_[a-zA-Z0-9]{36,}	"GitHub OAuth token (gho_...)"'
+    'github_pat_[a-zA-Z0-9_]{20,}	"GitHub fine-grained PAT"'
+    'AKIA[0-9A-Z]{16}	"AWS access key id (AKIA...)"'
+    'xox[baprs]-[a-zA-Z0-9-]{10,}	"Slack token (xox...)"'
+    # Postgres URL with non-placeholder password (postgres://user:NOTPLACEHOLDER@).
+    'postgres://[a-zA-Z0-9_]+:([^_][^@]*)@	"postgres URL with literal password (use __DB_PASSWORD__)"'
+    # Long hex secret assigned to a known env var name (looks like a real credential).
+    '(SESSION_SECRET|ADMIN_PASSWORD|SECRET_KEY|API_KEY)=[a-fA-F0-9]{32,}	"hardcoded 32+ hex char secret"'
+)
+
+while IFS= read -r file; do
+    [ -f "$file" ] || continue
+    content=$(git diff --cached -- "$file" | grep -E '^\+' | grep -vE '^\+\+\+')
+    [ -z "$content" ] && continue
+
+    for entry in "${PATTERNS[@]}"; do
+        pattern="${entry%%	*}"
+        description="${entry#*	}"
+        # shellcheck disable=SC2312
+        matches=$(grep -nE "$pattern" <<< "$content" || true)
+        if [ -n "$matches" ]; then
+            errors=$((errors + 1))
+            echo "❌ $file: $description" >&2
+            echo "$matches" | sed 's/^/    /' >&2
+        fi
+    done
+done <<< "$STAGED"
+
+if [ "$errors" -gt 0 ]; then
+    echo "" >&2
+    echo "Blocked $errors potential leak(s) in staged files." >&2
+    echo "If this is a false positive, bypass with: git commit --no-verify" >&2
+    exit 1
+fi
+
+exit 0
