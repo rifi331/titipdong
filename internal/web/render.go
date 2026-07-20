@@ -3,6 +3,7 @@ package web
 
 import (
 	"embed"
+	"fmt"
 	"html/template"
 	"math"
 	"net/http"
@@ -32,6 +33,7 @@ var templateFuncs = template.FuncMap{
 	"deref":         derefInt64,
 	"firstNonEmpty": firstNonEmptyStr,
 	"subtract":      subtractFloat,
+	"fmtDate":       fmtDate,
 	"roleLabel":     roleLabel,
 	"currencySym":   currencySym,
 	"hasPrefix":     strings.HasPrefix,
@@ -225,6 +227,15 @@ func firstNonEmptyStr(vs ...string) string {
 
 // subtractFloat returns a - b.
 func subtractFloat(a, b float64) float64 { return a - b }
+
+// fmtDate renders a time.Time as "2 Jan 2006" (Indonesian-friendly).
+func fmtDate(t time.Time) string {
+	if t.IsZero() {
+		return "-"
+	}
+	months := []string{"Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"}
+	return fmt.Sprintf("%d %s %d", t.Day(), months[int(t.Month())-1], t.Year())
+}
 
 // render writes a template by name with the given data.
 func (s *Server) render(w http.ResponseWriter, r *http.Request, name string, data map[string]any, status ...int) {

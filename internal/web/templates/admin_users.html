@@ -9,7 +9,7 @@
     <div class="flex justify-between items-start">
       <div>
         <div class="font-medium">{{.DisplayName}} <span class="text-xs text-slate-400">({{.Email}})</span></div>
-        <div class="text-xs text-slate-500">{{.CreatedAt}}</div>
+        <div class="text-xs text-slate-500">{{fmtDate .CreatedAt}}</div>
       </div>
       <span class="text-xs px-2 py-0.5 rounded-full {{if eq $r "admin"}}bg-sky-100 text-sky-700{{else if eq $r "jastiper"}}bg-emerald-100 text-emerald-700{{else}}bg-slate-100 text-slate-600{{end}}">
         {{if eq $r "admin"}}Admin{{else if eq $r "jastiper"}}Jastiper{{else}}Buyer{{end}}

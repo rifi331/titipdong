@@ -2,6 +2,7 @@
 titipdong
 titipdong.exe
 *.exe
+*.exe~
 *.dll
 *.so
 *.dylib

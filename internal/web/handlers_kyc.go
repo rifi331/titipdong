@@ -3,6 +3,7 @@ package web
 import (
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/titipdong/titipdong/internal/auth"
 	"github.com/titipdong/titipdong/internal/kyc"
@@ -84,8 +85,11 @@ func (s *Server) handleAdminUsers(w http.ResponseWriter, r *http.Request) {
 	}
 	defer rows.Close()
 	type urow struct {
-		ID, Email, Role, DisplayName string
-		CreatedAt                    string
+		ID          int64
+		Email       string
+		Role        string
+		DisplayName string
+		CreatedAt   time.Time
 	}
 	var users []urow
 	for rows.Next() {

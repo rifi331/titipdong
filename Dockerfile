@@ -14,7 +14,9 @@ COPY internal/web/templates ./internal/web/templates
 RUN npx tailwindcss -i ./web/static/src.css -o ./web/static/app.css --minify
 
 # ---------- Stage 2: Go build ----------
-FROM golang:1.22-alpine AS go
+# Pin Go to match the go.mod toolchain directive (avoids "go mod download"
+# failing in CI because the image's Go is older than the module requires).
+FROM golang:1.25-alpine AS go
 WORKDIR /src
 RUN apk add --no-cache git
 COPY go.mod go.sum ./

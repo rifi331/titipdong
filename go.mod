@@ -1,11 +1,12 @@
 module github.com/titipdong/titipdong
 
-go 1.25.1
+go 1.25.0
 
 require (
 	github.com/alexedwards/scs/v2 v2.9.0
 	github.com/go-chi/chi/v5 v5.3.1
 	github.com/jackc/pgx/v5 v5.10.0
+	github.com/joho/godotenv v1.5.1
 	golang.org/x/crypto v0.54.0
 )
 
