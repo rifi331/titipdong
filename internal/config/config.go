@@ -22,7 +22,8 @@ type Config struct {
 	// Optional receipt-scan via OpenAI vision. Empty => feature hidden.
 	OpenAIAPIKey string
 
-	// FX source. Default frankfurter.app (free, no key).
+	// FX source. Default frankfurter.dev (free, no key). The older .app domain
+	// is deprecated and returns 301 / missing currencies.
 	FXBaseURL string
 }
 
@@ -37,7 +38,7 @@ func Load() (Config, error) {
 		AdminEmail:    env("ADMIN_EMAIL", ""),
 		AdminPassword: env("ADMIN_PASSWORD", ""),
 		OpenAIAPIKey:  env("OPENAI_API_KEY", ""),
-		FXBaseURL:     strings.TrimRight(env("FX_BASE_URL", "https://api.frankfurter.app"), "/"),
+		FXBaseURL:     strings.TrimRight(env("FX_BASE_URL", "https://api.frankfurter.dev/v1"), "/"),
 	}
 
 	if c.SessionSecret == "" {

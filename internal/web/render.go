@@ -34,6 +34,7 @@ var templateFuncs = template.FuncMap{
 	"deref":         derefInt64,
 	"deref0":        derefInt64Str,
 	"firstNonEmpty": firstNonEmptyStr,
+	"containsStr":   containsString,
 	"subtract":      subtractFloat,
 	"fmtDate":       fmtDate,
 	"roleLabel":     roleLabel,
@@ -238,6 +239,17 @@ func firstNonEmptyStr(vs ...string) string {
 
 // subtractFloat returns a - b.
 func subtractFloat(a, b float64) float64 { return a - b }
+
+// containsString reports whether the slice contains s. Used by the
+// currency dropdown to decide whether to append a custom "(dari scan)" option.
+func containsString(slice []string, s string) bool {
+	for _, v := range slice {
+		if v == s {
+			return true
+		}
+	}
+	return false
+}
 
 // fmtDate renders a time.Time as "2 Jan 2006" (Indonesian-friendly).
 func fmtDate(t time.Time) string {

@@ -27,7 +27,7 @@ services:
       - /mnt/.ix-applications/titipdong.env      # path on TrueNAS host (see setup script)
     environment:
       ADDR: ":30000"
-      FX_BASE_URL: "https://api.frankfurter.app"
+      FX_BASE_URL: "https://api.frankfurter.dev/v1"
       UPLOADS_DIR: "/app/uploads"
     volumes:
       - uploads:/app/uploads

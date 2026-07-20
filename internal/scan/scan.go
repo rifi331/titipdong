@@ -111,8 +111,43 @@ func (s *Service) Extract(ctx context.Context, imageBytes []byte, contentType st
 	if err := json.Unmarshal([]byte(raw), &r); err != nil {
 		return Result{}, fmt.Errorf("parse openai json: %w (raw=%q)", err, raw)
 	}
-	r.Currency = strings.ToUpper(strings.TrimSpace(r.Currency))
+	r.Currency = normalizeCurrency(r.Currency)
 	return r, nil
+}
+
+// normalizeCurrency maps common non-ISO forms (symbols, local abbreviations)
+// to their ISO 4217 codes. Falls back to the input upper-cased.
+// OpenAI sometimes returns "RM" (Malaysian Ringgit) instead of "MYR",
+// "¥" for JPY/CNY (ambiguous, default to JPY), etc.
+func normalizeCurrency(s string) string {
+	s = strings.ToUpper(strings.TrimSpace(s))
+	switch s {
+	case "RM", "RINGGIT", "MY":
+		return "MYR"
+	case "¥", "YEN", "YUAN", "JPY¥":
+		return "JPY" // ambiguous ¥ defaults to JPY
+	case "CN¥", "RMB", "CNY¥":
+		return "CNY"
+	case "₩", "WON":
+		return "KRW"
+	case "฿", "BAHT":
+		return "THB"
+	case "$", "USD$":
+		return "USD"
+	case "S$", "SGD$":
+		return "SGD"
+	case "HK$":
+		return "HKD"
+	case "NT$":
+		return "TWD"
+	case "€", "EUR€":
+		return "EUR"
+	case "£", "GBP£":
+		return "GBP"
+	case "A$", "AUD$":
+		return "AUD"
+	}
+	return s
 }
 
 // --- OpenAI request/response shapes ---
