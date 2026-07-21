@@ -30,7 +30,7 @@
     <label class="col-span-1">
       <span class="text-sm text-slate-600">Mata uang</span>
       <select name="currency" class="mt-1 w-full rounded-lg border border-slate-300 px-2 py-2">
-        {{$cur := firstNonEmpty $o.Currency $sr.Currency "JPY"}}
+        {{$cur := firstNonEmpty (currencyOf $o) (currencyOf $sr) "JPY"}}
         {{if and $cur (not (containsStr .supportedCurrencies $cur))}}
           <option value="{{$cur}}" selected>{{$cur}} (dari scan)</option>
         {{end}}

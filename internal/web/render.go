@@ -8,6 +8,7 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"reflect"
 	"strings"
 	"time"
 
@@ -35,6 +36,7 @@ var templateFuncs = template.FuncMap{
 	"deref0":        derefInt64Str,
 	"firstNonEmpty": firstNonEmptyStr,
 	"containsStr":   containsString,
+	"currencyOf":    currencyOf,
 	"subtract":      subtractFloat,
 	"fmtDate":       fmtDate,
 	"roleLabel":     roleLabel,
@@ -261,6 +263,29 @@ func containsString(slice []string, s string) bool {
 		}
 	}
 	return false
+}
+
+// currencyOf safely reads the Currency field from an order/scan-result value
+// passed from a template, returning "" for nil or unknown types. The order
+// form uses both orders.Order and scan.Result, and either may be nil when
+// creating a brand-new order, so direct field access panics in templates.
+func currencyOf(v any) string {
+	switch x := v.(type) {
+	case nil:
+		return ""
+	case orders.Order:
+		return x.Currency
+	}
+	// scan.Result lives in another package; reach it via reflection to avoid
+	// an import cycle (web -> scan is fine, but we keep this generic).
+	rv := reflect.ValueOf(v)
+	if rv.Kind() == reflect.Struct {
+		f := rv.FieldByName("Currency")
+		if f.IsValid() && f.Kind() == reflect.String {
+			return f.String()
+		}
+	}
+	return ""
 }
 
 // fmtDate renders a time.Time as "2 Jan 2006" (Indonesian-friendly).
