@@ -4,6 +4,75 @@ Each entry follows the standard template (Author / Date / Changes / DB / Detail)
 
 ---
 
+Version v0.7.0 - admin FX rate refresh + editable rate in order form
+----------------------------------------------------------------------------------------------
+A. Author: Rifi
+B. Date: 2026-07-21
+C. Changes:
+    - FX rate in the order form is pre-filled from DB (or Frankfurter on miss)
+      AND editable by the jastiper
+    - new admin page "Kurs Valuta" with a "Refresh Rate Terbaru" button that
+      pulls fresh rates for every supported currency from Frankfurter and
+      stores them in the DB
+D. DB: N/A (reuses existing fx_rates table)
+E. Detail:
+    - Rate() priority: (1) DB fresh (<24h), (2) Frankfurter live + cache,
+      (3) DB stale as last resort, (4) zero on total failure.
+    - Admin clicks "Refresh" -> currency.RefreshAll() fetches all supported
+      currencies and overwrites the DB rows. Admin then sees the result of
+      every currency (ok with rate, or error message).
+    - The order form's "Kurs" input is pre-filled from the same Rate() call
+      and the jastiper can override the value directly (e.g. their own money
+      changer rate). Server stores the override as fx_rate_snapshot.
+    - Admin home now has a "💱 Kurs Valuta" tile linking to the new page.
+* Rest endpoint
+    - (new) GET  /app/admin/rates - list cached rates + age + stale flag
+    - (new) POST /app/admin/rates/refresh - fetch fresh rates from Frankfurter
+    - (new) GET  /app/orders/fx?currency=XXX - plain-text rate (added v0.6.8)
+    - (new) GET  /app/orders/{id}/message - plain-text status msg (added v0.6.8)
+* SQL script: N/A
+* Go
+    - (modified) internal/currency/currency.go - Rate() priority doc + RefreshAll + SupportedCodes
+    - (new) internal/web/handlers_rates.go - admin rates + refresh handlers
+    - (modified) internal/web/handlers_orders.go - parse fx_rate_override, fall back to Rate()
+    - (modified) internal/web/server.go - register /app/admin/rates* routes
+    - (modified) internal/web/templates/order_form.html - new "Kurs" input,
+      consolidated Alpine.js component (orderForm in app.js)
+    - (modified) internal/web/templates/home_admin.html - Kurs Valuta tile
+    - (new) internal/web/templates/admin_rates.html
+    - (modified) web/static/app.js - orderForm Alpine component
+    - (modified) internal/web/templates/layout.html - [x-cloak] style
+* Property: N/A
+
+Version v0.6.9 - editable FX rate in order form
+----------------------------------------------------------------------------------------------
+A. Author: Rifi
+B. Date: 2026-07-21
+C. Changes:
+    - FX rate in the order form is now pre-filled AND editable
+D. DB: N/A
+E. Detail:
+    - Previously the rate was hidden and computed server-side only. Now the
+      jastiper sees the rate (1 foreign unit = N IDR) and can edit it when the
+      24h-cached rate is stale (e.g. they have a fresher rate from their own
+      money changer).
+    - On new orders: rate is fetched live from /app/orders/fx and pre-filled.
+    - On edit: rate is pre-filled from the stored fx_rate_snapshot.
+    - Changing the currency dropdown re-fetches the rate automatically.
+    - Selling-price preview (added in v0.6.8) updates from whatever rate the
+      jastiper types.
+* Rest endpoint: N/A
+* SQL script: N/A
+* Go
+    - (modified) internal/web/handlers_orders.go - parse fx_rate_override from
+      form; fall back to FX service only when blank/0
+    - (modified) internal/web/templates/order_form.html - new "Kurs" input,
+      consolidated Alpine.js component
+    - (modified) web/static/app.js - new orderForm() Alpine component with
+      amount/rate/markup state, calc(), refreshRate()
+    - (modified) internal/web/templates/layout.html - [x-cloak] style
+* Property: N/A
+
 Version v0.6.8 - live selling price preview + copy-message button
 ----------------------------------------------------------------------------------------------
 A. Author: Rifi

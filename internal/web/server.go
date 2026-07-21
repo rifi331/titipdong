@@ -182,6 +182,8 @@ func (s *Server) Handler() http.Handler {
 			r.Get("/app/admin/users", s.handleAdminUsers)
 			r.Post("/app/admin/users/{id}/role", s.handleAdminSetRole)
 			r.Get("/app/admin/applications", s.handleAdminApplications)
+			r.Post("/app/admin/rates/refresh", s.handleAdminRefreshRates)
+			r.Get("/app/admin/rates", s.handleAdminRates)
 			r.Post("/app/admin/applications/{id}/approve", s.handleAdminApprove)
 			r.Post("/app/admin/applications/{id}/reject", s.handleAdminReject)
 		})

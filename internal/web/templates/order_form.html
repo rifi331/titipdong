@@ -26,75 +26,55 @@
       class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-sky-500">
   </label>
 
-  <div class="grid grid-cols-3 gap-2">
-    <label class="col-span-1">
-      <span class="text-sm text-slate-600">Mata uang</span>
-      <select name="currency" class="mt-1 w-full rounded-lg border border-slate-300 px-2 py-2">
-        {{$cur := firstNonEmpty (currencyOf $o) (currencyOf $sr) "JPY"}}
-        {{if and $cur (not (containsStr .supportedCurrencies $cur))}}
-          <option value="{{$cur}}" selected>{{$cur}} (dari scan)</option>
-        {{end}}
-        {{range .supportedCurrencies}}
-        <option value="{{.}}" {{if eq . $cur}}selected{{end}}>{{.}}</option>
-        {{end}}
-      </select>
-    </label>
-    <label class="col-span-2">
-      <span class="text-sm text-slate-600">Harga (mata uang asal)</span>
-      <input name="amount_foreign" inputmode="decimal"
-        value="{{if $o}}{{printf "%.0f" $o.AmountForeign}}{{else}}{{if $sr.Amount}}{{printf "%.0f" $sr.Amount}}{{end}}{{end}}"
-        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-sky-500">
-    </label>
-  </div>
+  <div x-data="orderForm({
+      amount: '{{if $o}}{{printf "%.0f" $o.AmountForeign}}{{else}}{{if $sr.Amount}}{{printf "%.0f" $sr.Amount}}{{end}}{{end}}',
+      rate: '{{if $o}}{{printf "%.4f" $o.FXRateSnapshot}}{{else}}0{{end}}',
+      markup: '{{if $o}}{{fmt2 $o.MarkupPct}}{{else}}20{{end}}',
+      currency: '{{$cur}}'
+    })"
+    x-init="if(!rate || rate==='0') refreshRate();
+            $watch('amount', calc); $watch('rate', calc); $watch('markup', calc)">
 
-  <label class="block"
-    x-data="{amount: '', markup: '{{if $o}}{{fmt2 $o.MarkupPct}}{{else}}20{{end}}', rate: {{if $o}}{{$o.FXRateSnapshot}}{{else}}0{{end}}, selling: 0,
-             calc() {
-               const a = parseFloat((this.amount||'').replace(/[,.]/g,'')) || 0;
-               const m = parseFloat(this.markup) || 0;
-               this.selling = a * this.rate * (1 + m/100);
-             },
-             fmt(v) {
-               const n = Math.round(v);
-               return 'Rp ' + n.toLocaleString('id-ID');
-             }}"
-    x-init="if(!rate) fetch('/app/orders/fx?currency=' + document.querySelector('[name=currency]').value).then(r=>r.text()).then(t=>{rate=parseFloat(t)||0;calc()});
-            $watch('amount',()=>calc()); $watch('markup',()=>calc())">
-    <span class="text-sm text-slate-600">Markup (%)</span>
-    <input name="markup_pct" inputmode="decimal" x-model="markup"
-      class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-sky-500">
-    <span class="text-xs text-slate-400">Harga jual = modal IDR × (1 + markup%)</span>
-    <div x-show="selling > 0" class="mt-2 bg-emerald-50 border border-emerald-200 rounded-lg p-2 text-sm">
-      <div class="text-slate-600">Harga jual estimasi:</div>
-      <div class="font-bold text-emerald-700 text-lg" x-text="fmt(selling)"></div>
-      <div class="text-xs text-slate-400" x-show="rate > 0">Rate: 1 = <span x-text="rate.toFixed(2)"></span> IDR</div>
+    <div class="grid grid-cols-3 gap-2 mb-3">
+      <label class="col-span-1">
+        <span class="text-sm text-slate-600">Mata uang</span>
+        <select name="currency" x-model="currency" @change="refreshRate()"
+          class="mt-1 w-full rounded-lg border border-slate-300 px-2 py-2">
+          {{$cur := firstNonEmpty (currencyOf $o) (currencyOf $sr) "JPY"}}
+          {{if and $cur (not (containsStr .supportedCurrencies $cur))}}
+            <option value="{{$cur}}" selected>{{$cur}} (dari scan)</option>
+          {{end}}
+          {{range .supportedCurrencies}}
+          <option value="{{.}}" {{if eq . $cur}}selected{{end}}>{{.}}</option>
+          {{end}}
+        </select>
+      </label>
+      <label class="col-span-2">
+        <span class="text-sm text-slate-600">Harga (mata uang asal)</span>
+        <input name="amount_foreign" inputmode="decimal" x-model="amount"
+          class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-sky-500">
+      </label>
     </div>
-    <input type="hidden" name="amount_foreign_watcher" x-model="amount">
-  </label>
 
-  <!-- bind amount input ke alpine state via event listener -->
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      const amtInput = document.querySelector('[name=amount_foreign]');
-      const markupLabel = document.querySelector('[name=markup_pct]').closest('[x-data]');
-      if (amtInput && markupLabel && markupLabel._x_dataStack) {
-        amtInput.addEventListener('input', () => {
-          markupLabel._x_dataStack[0].amount = amtInput.value;
-          markupLabel._x_dataStack[0].calc();
-        });
-        markupLabel._x_dataStack[0].amount = amtInput.value;
-      }
-      // refetch rate when currency changes
-      const curSelect = document.querySelector('[name=currency]');
-      if (curSelect && markupLabel) {
-        curSelect.addEventListener('change', async () => {
-          const r = await fetch('/app/orders/fx?currency=' + curSelect.value).then(r=>r.text());
-          markupLabel._x_dataStack[0].rate = parseFloat(r) || 0;
-          markupLabel._x_dataStack[0].calc();
-        });
-      }
-    });
-  </script>
+    <label class="block mb-3">
+      <span class="text-sm text-slate-600">Kurs (1 mata uang = ... IDR)</span>
+      <input name="fx_rate_override" inputmode="decimal" x-model="rate"
+        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-sky-500">
+      <span class="text-xs text-slate-400">Otomatis dari kurs terbaru. Edit kalau punya rate sendiri (mis. dari money changer).</span>
+    </label>
+
+    <label class="block">
+      <span class="text-sm text-slate-600">Markup (%)</span>
+      <input name="markup_pct" inputmode="decimal" x-model="markup"
+        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-sky-500">
+      <span class="text-xs text-slate-400">Harga jual = (harga × kurs) × (1 + markup%)</span>
+    </label>
+
+    <div x-show="selling > 0" x-cloak class="mt-2 bg-emerald-50 border border-emerald-200 rounded-lg p-2 text-sm">
+      <div class="text-slate-600">Harga jual estimasi:</div>
+      <div class="font-bold text-emerald-700 text-lg" x-text="'Rp ' + Math.round(selling).toLocaleString('id-ID')"></div>
+    </div>
+  </div>
 
   <div class="grid grid-cols-2 gap-2">
     <label>

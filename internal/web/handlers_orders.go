@@ -243,10 +243,18 @@ func (s *Server) orderFromForm(r *http.Request, ownerID, id int64) (orders.Order
 	o.CustomerID = parseOptionalInt(f.Get("customer_id"))
 	o.TripID = parseOptionalInt(f.Get("trip_id"))
 
-	// Snapshot FX rate at order time; compute selling price.
-	rate, err := s.currency.Rate(r.Context(), o.Currency)
-	if err != nil {
-		rate = 1 // graceful fallback; jastiper can correct later
+	// Snapshot FX rate at order time. The jastiper can override the cached
+	// rate manually (24h cache can be stale; they may have a fresher rate
+	// from their own money-changer). If the override is empty/0, fall back
+	// to the cached/live rate from the FX service.
+	rate := parseAmount(f.Get("fx_rate_override"))
+	if rate <= 0 {
+		fetched, err := s.currency.Rate(r.Context(), o.Currency)
+		if err != nil {
+			rate = 1 // graceful fallback; jastiper can correct later
+		} else {
+			rate = fetched
+		}
 	}
 	o.FXRateSnapshot = rate
 	o.SellingPriceIDR = sellingPrice(o.AmountForeign, rate, o.MarkupPct)
