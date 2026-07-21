@@ -26,6 +26,7 @@
       class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-sky-500">
   </label>
 
+  {{$cur := firstNonEmpty (currencyOf $o) (currencyOf $sr) "JPY"}}
   <div x-data="orderForm({
       amount: '{{if $o}}{{printf "%.0f" $o.AmountForeign}}{{else}}{{if $sr.Amount}}{{printf "%.0f" $sr.Amount}}{{end}}{{end}}',
       rate: '{{if $o}}{{printf "%.4f" $o.FXRateSnapshot}}{{else}}0{{end}}',
@@ -40,7 +41,6 @@
         <span class="text-sm text-slate-600">Mata uang</span>
         <select name="currency" x-model="currency" @change="refreshRate()"
           class="mt-1 w-full rounded-lg border border-slate-300 px-2 py-2">
-          {{$cur := firstNonEmpty (currencyOf $o) (currencyOf $sr) "JPY"}}
           {{if and $cur (not (containsStr .supportedCurrencies $cur))}}
             <option value="{{$cur}}" selected>{{$cur}} (dari scan)</option>
           {{end}}
