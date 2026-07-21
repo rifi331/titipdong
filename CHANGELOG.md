@@ -4,6 +4,32 @@ Each entry follows the standard template (Author / Date / Changes / DB / Detail)
 
 ---
 
+Version v0.6.7 - fix order_form template panic (nil-safe currency access)
+----------------------------------------------------------------------------------------------
+A. Author: Rifi
+B. Date: 2026-07-21
+C. Changes:
+    - fix scan-receipt flow that only rendered 2 fields then stopped
+D. DB: N/A
+E. Detail:
+    - Symptom: after scanning a receipt, the redirect to /app/orders/new
+      only showed the item + store fields, then the page cut off.
+    - Server log: `template exec error (order_form.html): ... at
+      <$o.Currency>: invalid value; expected string`.
+    - Root cause: when creating a new order, $o (orders.Order) is nil. The
+      template accessed $o.Currency directly, which panics on nil. The
+      logRecoverer middleware (added in v0.6.1) caught the panic but the
+      page render was already truncated.
+    - Fix: new currencyOf(v any) string helper uses reflection to safely
+      read the Currency field from orders.Order or scan.Result (or returns
+      "" for nil). Template now uses {{currencyOf $o}} {{currencyOf $sr}}.
+* Rest endpoint: N/A
+* SQL script: N/A
+* Go
+    - (modified) internal/web/render.go - currencyOf helper + reflect import
+    - (modified) internal/web/templates/order_form.html - use currencyOf
+* Property: N/A
+
 Version v0.6.6 - fix photo upload permission (distroless -> alpine)
 ----------------------------------------------------------------------------------------------
 A. Author: Rifi
