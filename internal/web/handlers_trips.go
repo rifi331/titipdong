@@ -24,16 +24,25 @@ func (s *Server) handleTripCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	t := trips.Trip{
-		OwnerUserID: u.ID,
-		Name:        strings.TrimSpace(r.FormValue("name")),
-		Country:     strings.TrimSpace(r.FormValue("country")),
-		Currency:    strings.ToUpper(strings.TrimSpace(r.FormValue("currency"))),
+		OwnerUserID:        u.ID,
+		Title:              strings.TrimSpace(r.FormValue("title")),
+		DestinationCountry: strings.TrimSpace(r.FormValue("destination_country")),
+		DestinationCity:    strings.TrimSpace(r.FormValue("destination_city")),
+		Currency:           strings.ToUpper(strings.TrimSpace(r.FormValue("currency"))),
+		MaxWeightKg:        parseAmount(r.FormValue("max_weight_kg")),
+		MaxItemSlots:       int(parseAmount(r.FormValue("max_item_slots"))),
+		Notes:              strings.TrimSpace(r.FormValue("notes")),
 	}
-	if t.Name == "" {
-		t.Name = "Trip " + time.Now().Format("Jan 2006")
+	if t.Title == "" {
+		t.Title = "Trip " + time.Now().Format("Jan 2006")
 	}
-	t.StartDate = parseDatePtr(r.FormValue("start_date"))
-	t.EndDate = parseDatePtr(r.FormValue("end_date"))
+	if t.Currency == "" {
+		t.Currency = "JPY"
+	}
+	t.DepartureDate = parseDatePtr(r.FormValue("departure_date"))
+	t.ReturnDate = parseDatePtr(r.FormValue("return_date"))
+	t.EstimatedDelivery = parseDatePtr(r.FormValue("estimated_delivery"))
+	t.OrderCutoffAt = parseDateTimePtr(r.FormValue("order_cutoff_at"))
 	if _, err := s.trips.Create(r.Context(), t); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -54,19 +63,15 @@ func (s *Server) handleTripDashboard(w http.ResponseWriter, r *http.Request) {
 	breakdown, _ := s.orders.BreakdownByCustomer(r.Context(), u.ID, &id)
 	topStores, _ := s.orders.TopStores(r.Context(), u.ID, &id, 5)
 
-	// Top customer (by total IDR).
 	var topCustomer string
 	if len(breakdown) > 0 {
 		topCustomer = breakdown[0].CustomerName
 	}
-
-	// Best "category" proxy = busiest source store.
 	var bestStore string
 	if len(topStores) > 0 {
 		bestStore = topStores[0].SourceStore
 	}
-
-	summaryLink := waSummaryLink(t.Name, sum, topCustomer)
+	summaryLink := waSummaryLink(t.Title, sum, topCustomer)
 
 	s.render(w, r, "trip_dashboard.html", map[string]any{
 		"trip":        t,
@@ -81,8 +86,23 @@ func (s *Server) handleTripDashboard(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleTripClose(w http.ResponseWriter, r *http.Request) {
 	u, _ := auth.UserFrom(r)
-	_ = s.trips.SetStatus(r.Context(), u.ID, pathInt64(r, "id"), trips.StatusClosed)
+	_ = s.trips.SetStatus(r.Context(), u.ID, pathInt64(r, "id"), trips.StatusInHomeCountry)
 	http.Redirect(w, r, "/app/trips", http.StatusSeeOther)
+}
+
+// parseDateTimePtr parses a datetime-local input (YYYY-MM-DDTHH:MM).
+func parseDateTimePtr(s string) *time.Time {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return nil
+	}
+	for _, layout := range []string{"2006-01-02T15:04", "2006-01-02 15:04", "2006-01-02T15:04:05"} {
+		if t, err := time.Parse(layout, s); err == nil {
+			tt := t
+			return &tt
+		}
+	}
+	return nil
 }
 
 func parseDatePtr(s string) *time.Time {

@@ -6,20 +6,65 @@
     class="bg-sky-500 text-white text-sm px-3 py-2 rounded-lg">+ Trip Baru</button>
 </div>
 
-<form id="newt" method="post" action="/app/trips" class="hidden bg-white p-4 rounded-xl shadow-sm mb-4 space-y-2">
-  <input name="name" placeholder="Nama trip (cth: Tokyo Juli 2026)"
-    class="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-sky-500">
+<form id="newt" method="post" action="/app/trips" class="hidden bg-white p-4 rounded-xl shadow-sm mb-4 space-y-3">
+  <label class="block">
+    <span class="text-sm text-slate-600">Judul Trip *</span>
+    <input name="title" placeholder="Tokyo July 2026"
+      class="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-sky-500">
+  </label>
   <div class="grid grid-cols-2 gap-2">
-    <input name="country" placeholder="Negara (Jepang)"
-      class="rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-sky-500">
-    <select name="currency" class="rounded-lg border border-slate-300 px-3 py-2">
+    <label>
+      <span class="text-sm text-slate-600">Negara</span>
+      <input name="destination_country" placeholder="Jepang"
+        class="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-sky-500">
+    </label>
+    <label>
+      <span class="text-sm text-slate-600">Kota</span>
+      <input name="destination_city" placeholder="Tokyo"
+        class="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-sky-500">
+    </label>
+  </div>
+  <label class="block">
+    <span class="text-sm text-slate-600">Mata Uang</span>
+    <select name="currency" class="w-full rounded-lg border border-slate-300 px-3 py-2">
       {{range .supportedCurrencies}}<option value="{{.}}">{{.}}</option>{{end}}
     </select>
+  </label>
+  <div class="grid grid-cols-2 gap-2">
+    <label>
+      <span class="text-sm text-slate-600">Tanggal Pergi</span>
+      <input name="departure_date" type="date" class="w-full rounded-lg border border-slate-300 px-3 py-2">
+    </label>
+    <label>
+      <span class="text-sm text-slate-600">Tanggal Pulang</span>
+      <input name="return_date" type="date" class="w-full rounded-lg border border-slate-300 px-3 py-2">
+    </label>
   </div>
   <div class="grid grid-cols-2 gap-2">
-    <input name="start_date" type="date" class="rounded-lg border border-slate-300 px-3 py-2">
-    <input name="end_date" type="date" class="rounded-lg border border-slate-300 px-3 py-2">
+    <label>
+      <span class="text-sm text-slate-600">Order Cutoff</span>
+      <input name="order_cutoff_at" type="datetime-local" class="w-full rounded-lg border border-slate-300 px-3 py-2">
+    </label>
+    <label>
+      <span class="text-sm text-slate-600">Estimasi Pengiriman</span>
+      <input name="estimated_delivery" type="date" class="w-full rounded-lg border border-slate-300 px-3 py-2">
+    </label>
   </div>
+  <div class="grid grid-cols-2 gap-2">
+    <label>
+      <span class="text-sm text-slate-600">Max Berat (kg)</span>
+      <input name="max_weight_kg" type="number" step="0.1" placeholder="20" class="w-full rounded-lg border border-slate-300 px-3 py-2">
+    </label>
+    <label>
+      <span class="text-sm text-slate-600">Max Item Slot</span>
+      <input name="max_item_slots" type="number" placeholder="50" class="w-full rounded-lg border border-slate-300 px-3 py-2">
+    </label>
+  </div>
+  <label class="block">
+    <span class="text-sm text-slate-600">Notes</span>
+    <textarea name="notes" rows="2" placeholder="Catatan trip..."
+      class="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-sky-500"></textarea>
+  </label>
   <button class="bg-sky-500 text-white px-4 py-2 rounded-lg">Simpan</button>
 </form>
 
@@ -28,10 +73,21 @@
   {{range .trips}}
   <a href="/app/trips/{{.ID}}" class="block bg-white rounded-xl p-3 shadow-sm border border-slate-100">
     <div class="flex justify-between">
-      <div class="font-medium">{{.Name}}</div>
-      {{if eq .Status "active"}}<span class="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">Aktif</span>{{else}}<span class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">Selesai</span>{{end}}
+      <div class="font-medium">{{.Title}}</div>
+      <span class="text-xs px-2 py-0.5 rounded-full
+        {{if eq .Status "on_plan"}}bg-amber-100 text-amber-700
+        {{else if eq .Status "at_destination_country"}}bg-sky-100 text-sky-700
+        {{else}}bg-emerald-100 text-emerald-700{{end}}">
+        {{if eq .Status "on_plan"}}📋 On Plan
+        {{else if eq .Status "at_destination_country"}}✈️ At Destination
+        {{else}}🏠 In Home Country{{end}}
+      </span>
     </div>
-    <div class="text-xs text-slate-500 mt-1">{{.Country}} · {{.Currency}}</div>
+    <div class="text-xs text-slate-500 mt-1">
+      {{.DestinationCountry}}{{if .DestinationCity}} · {{.DestinationCity}}{{end}} · {{.Currency}}
+    </div>
+    {{if .DepartureDate}}<div class="text-xs text-slate-400">{{fmtDate (timeDeref .DepartureDate)}} → {{if .ReturnDate}}{{fmtDate (timeDeref .ReturnDate)}}{{end}}</div>{{end}}
+    {{if gtZero .MaxWeightKg}}<div class="text-xs text-slate-400">🧳 {{printf "%.1f" .UsedWeightKg}} / {{printf "%.1f" .MaxWeightKg}} kg</div>{{end}}
   </a>
   {{end}}
 </div>

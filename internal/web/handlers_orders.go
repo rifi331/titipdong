@@ -54,7 +54,7 @@ func (s *Server) handleOrdersList(w http.ResponseWriter, r *http.Request) {
 	if f.TripID != nil {
 		for _, t := range trips {
 			if t.ID == *f.TripID {
-				activeTripName = t.Name
+				activeTripName = t.Title
 			}
 		}
 	}

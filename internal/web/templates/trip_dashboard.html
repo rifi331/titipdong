@@ -1,17 +1,52 @@
-{{define "title"}}{{.trip.Name}} — TitipDong{{end}}
+{{define "title"}}{{.trip.Title}} — TitipDong{{end}}
 {{define "content"}}
 {{$t := .trip}}
 {{$s := .summary}}
 <a href="/app/trips" class="text-sm text-sky-600">← Semua Trip</a>
-<div class="flex items-center justify-between mt-1">
-  <h1 class="text-2xl font-bold">{{$t.Name}}</h1>
-  {{if eq $t.Status "active"}}
-  <form method="post" action="/app/trips/{{$t.ID}}/close" onsubmit="return confirm('Tutup trip ini?')">
-    <button class="text-xs border border-slate-300 px-3 py-1 rounded-full">Tutup Trip</button>
+<div class="flex items-center justify-between mt-1 mb-2">
+  <h1 class="text-2xl font-bold">{{$t.Title}}</h1>
+  {{if not (eq $t.Status "in_home_country")}}
+  <form method="post" action="/app/trips/{{$t.ID}}/close" onsubmit="return confirm('Tandai trip sudah sampai negara asal?')">
+    <button class="text-xs border border-slate-300 px-3 py-1 rounded-full">🏠 Selesai</button>
   </form>
   {{end}}
 </div>
-<p class="text-sm text-slate-500 mb-4">{{$t.Country}} · {{$t.Currency}}</p>
+
+<div class="bg-white rounded-xl p-3 shadow-sm mb-4 text-sm space-y-1">
+  <div class="flex justify-between">
+    <span class="text-slate-500">Status</span>
+    <span class="font-medium">
+      {{if eq $t.Status "on_plan"}}📋 On Plan
+      {{else if eq $t.Status "at_destination_country"}}✈️ At Destination
+      {{else}}🏠 In Home Country{{end}}
+    </span>
+  </div>
+  <div class="flex justify-between">
+    <span class="text-slate-500">Destinasi</span>
+    <span>{{$t.DestinationCountry}}{{if $t.DestinationCity}} · {{$t.DestinationCity}}{{end}}</span>
+  </div>
+  {{if $t.DepartureDate}}<div class="flex justify-between">
+    <span class="text-slate-500">Tanggal</span>
+    <span>{{fmtDate (timeDeref $t.DepartureDate)}} → {{if $t.ReturnDate}}{{fmtDate (timeDeref $t.ReturnDate)}}{{end}}</span>
+  </div>{{end}}
+  {{if $t.OrderCutoffAt}}<div class="flex justify-between">
+    <span class="text-slate-500">Order Cutoff</span>
+    <span class="text-rose-600 font-medium">{{fmtDate (timeDeref $t.OrderCutoffAt)}}</span>
+  </div>{{end}}
+  {{if $t.EstimatedDelivery}}<div class="flex justify-between">
+    <span class="text-slate-500">Estimasi Kirim</span>
+    <span>{{fmtDate (timeDeref $t.EstimatedDelivery)}}</span>
+  </div>{{end}}
+  {{if gtZero $t.MaxWeightKg}}<div class="flex justify-between">
+    <span class="text-slate-500">Berat</span>
+    <span>{{printf "%.1f" $t.UsedWeightKg}} / {{printf "%.1f" $t.MaxWeightKg}} kg</span>
+  </div>{{end}}
+  {{if gt $t.MaxItemSlots 0}}<div class="flex justify-between">
+    <span class="text-slate-500">Slot</span>
+    <span>{{$t.MaxItemSlots}} item</span>
+  </div>{{end}}
+  {{if $t.Notes}}<div class="mt-2 text-xs text-slate-500 bg-slate-50 rounded p-2">{{$t.Notes}}</div>{{end}}
+</div>
 
 <div class="grid grid-cols-2 gap-3 mb-4">
   <div class="bg-white rounded-xl p-3 shadow-sm">

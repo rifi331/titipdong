@@ -2,6 +2,63 @@
 
 Each entry follows the standard template (Author / Date / Changes / DB / Detail).
 
+---
+
+Version v0.9.0 - 8 UX bug fixes + trips v2 redesign
+----------------------------------------------------------------------------------------------
+A. Author: Rifi
+B. Date: 2026-07-21
+C. Changes:
+    - Fix #10: custom_request_form template eq int64 vs string error
+    - Fix #4: new catalog item detail page (/catalog/{id}) with Mau Ini + Request buttons
+    - Fix #5+#3: buyer home redesigned with clear nav (Browse Catalog, Request Custom, Jadi Jastiper)
+    - Fix #7: thanks page now has Copy Pesan button (not just WA link)
+    - Fix #9: accept request passes buyer_note + origin + weight into order note
+    - Fix #12: order save shows flash message on edit page
+    - Fix #6: custom form jastiper dropdown shows upcoming trip info
+    - Trips v2: full redesign with logistics fields + 3-stage status lifecycle
+D. DB:
+    - migration 0005_trips_v2: rename columns to English, add destination_city,
+      order_cutoff_at, estimated_delivery, max_weight_kg, used_weight_kg,
+      max_item_slots, notes. Replace trip_status enum (active/closed) with
+      3-stage (on_plan/at_destination_country/in_home_country).
+E. Detail:
+    - Trips table now tracks: title, destination_country, destination_city,
+      currency, departure_date, return_date, order_cutoff_at,
+      estimated_delivery, max_weight_kg, used_weight_kg, max_item_slots,
+      notes, status.
+    - Trip status lifecycle: on_plan -> at_destination_country -> in_home_country
+    - Trip create form shows all new fields (expandable).
+    - Trip dashboard shows logistics info (dates, cutoff, weight, slots, notes)
+      alongside revenue/margin/breakdown.
+    - Catalog item cards now clickable to detail page.
+    - Buyer home has 3 clear action cards instead of confusing links.
+    - Thanks page: Copy Pesan button extracts WA message text to clipboard.
+    - Accept request: order note now includes buyer note + origin + weight.
+    - Order create: flash message "Order berhasil dibuat" shown on redirect.
+* Rest endpoint
+    - (new) GET /catalog/{id} - catalog item detail page (public)
+* SQL script
+    - (new) internal/db/migrations/0005_trips_v2.up.sql / .down.sql
+* Go
+    - (modified) internal/trips/trips.go - full rewrite (new fields, 3-stage status)
+    - (modified) internal/web/handlers_trips.go - full rewrite (new fields, datetime parsing)
+    - (modified) internal/web/handlers_orders.go - flash message, t.Title fix
+    - (modified) internal/web/handlers_custom_request.go - string ID, trip info in jastiper dropdown
+    - (modified) internal/web/handlers_requests_admin.go - buyer_note in order note
+    - (new) internal/web/handlers_catalog_detail.go - item detail handler
+    - (modified) internal/web/server.go - route /catalog/{id}
+    - (modified) internal/web/templates/trips.html - full form + status badges
+    - (modified) internal/web/templates/trip_dashboard.html - logistics info
+    - (new) internal/web/templates/catalog_item_detail.html
+    - (modified) internal/web/templates/catalog_public.html - clickable cards
+    - (modified) internal/web/templates/home_buyer.html - 3 action cards
+    - (modified) internal/web/templates/custom_request_form.html - trip in dropdown
+    - (modified) internal/web/templates/request_thanks.html - copy button
+    - (modified) internal/web/templates/order_form.html - flash message
+    - (modified) web/static/app.css - rebuilt Tailwind
+* Property: N/A
+
 Version v0.8.0 - order status v2 redesign + payment detail + admin orders
 ----------------------------------------------------------------------------------------------
 A. Author: Rifi
