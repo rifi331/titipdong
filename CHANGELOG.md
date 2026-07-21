@@ -4,6 +4,25 @@ Each entry follows the standard template (Author / Date / Changes / DB / Detail)
 
 ---
 
+Version v0.7.1 - fix order_form template: $cur declared before use
+----------------------------------------------------------------------------------------------
+A. Author: Rifi
+B. Date: 2026-07-21
+C. Changes:
+    - fix "template: order_form.html:33: undefined variable $cur"
+D. DB: N/A
+E. Detail:
+    - v0.7.0 moved the x-data Alpine binding above the <select> that
+      previously declared {{$cur := ...}}, but kept referencing $cur
+      inside x-data -> template parse error at render time.
+    - The error broke the scan-receipt -> new-order flow: after scanning,
+      the redirect to /app/orders/new produced a template parse error.
+    - Move {{$cur := ...}} above the x-data block.
+    - Verified: GET /app/orders/new returns 200 with all fields, parse OK.
+* Go
+    - (modified) internal/web/templates/order_form.html - declare $cur first
+* Property: N/A
+
 Version v0.7.0 - admin FX rate refresh + editable rate in order form
 ----------------------------------------------------------------------------------------------
 A. Author: Rifi
