@@ -1,143 +1,146 @@
 # Change Log — TitipDong
 
-Format tiap entry mengikuti template standar (Author / Date / Changes / DB / Detail).
+Each entry follows the standard template (Author / Date / Changes / DB / Detail).
 
 ---
 
-Version v0.6.6 - fix photo upload permission (distroless → alpine)
+Version v0.6.6 - fix photo upload permission (distroless -> alpine)
 ----------------------------------------------------------------------------------------------
-A. Author: ZCode
+A. Author: Rifi
 B. Date: 2026-07-21
 C. Changes:
-    - fix photo upload (catalog/scan/KTP) yang silently gagal
+    - fix photo upload (catalog/scan/KTP) that silently failed
 D. DB: N/A
 E. Detail:
-    - Root cause: distroless image run sebagai user `nonroot`, tapi `/app`
-      owner-nya root. `MkdirAll('/app/uploads')` permission denied.
-    - Handler saveUpload error di-swallow diam-diam (`if err == nil`),
-      jadi keliatan sukses padahal photo_path kosong di DB.
-    - Switch distroless → alpine + `mkdir /app/uploads && chown nonroot`.
+    - Root cause: the distroless image runs as the `nonroot` user, but `/app`
+      is owned by root. `MkdirAll('/app/uploads')` returned permission denied.
+    - The saveUpload handler swallowed the error silently (`if err == nil`),
+      so the API looked successful but `photo_path` was empty in the DB.
+    - Switched base image from distroless to alpine and added
+      `mkdir /app/uploads && chown nonroot` so the runtime user can write.
 * Rest endpoint: N/A
 * SQL script: N/A
 * Go: N/A
 * Dockerfile
-    - (modified) Dockerfile — ganti FROM distroless ke alpine, add mkdir/chown
+    - (modified) Dockerfile - replaced FROM distroless with alpine, added mkdir/chown
 * Property: N/A
 
 Version v0.6.5 - expand currency normalization
 ----------------------------------------------------------------------------------------------
-A. Author: ZCode
+A. Author: Rifi
 B. Date: 2026-07-21
 C. Changes:
-    - normalizeCurrency map ~60 local forms (Rp, RM, ¥, $, dll) ke ISO code
-    - expand Supported list (+PHP, INR, CAD, NZD, CHF)
+    - normalizeCurrency now maps ~60 local forms (Rp, RM, Yen, $, etc.) to ISO codes
+    - expanded Supported list (+PHP, INR, CAD, NZD, CHF)
 D. DB: N/A
 E. Detail:
-    - Scan struk sering return simbol lokal (Rp, RM, ¥, $) bukan ISO (IDR, MYR, JPY, USD).
-    - Tanpa map, dropdown currency di form order gak match → keliatan kosong.
+    - Receipt scans often return local symbols (Rp, RM, Yen, $) instead of ISO
+      codes (IDR, MYR, JPY, USD). Without a mapping, the currency dropdown in
+      the order form did not match any option and looked empty.
 * Rest endpoint: N/A
 * SQL script: N/A
 * Go
-    - (modified) internal/scan/scan.go — normalizeCurrency expanded
-    - (modified) internal/currency/currency.go — Supported list +5
-    - (modified) internal/web/render.go — currencySym +6
-    - (new) internal/scan/scan_test.go — 40+ test cases
+    - (modified) internal/scan/scan.go - normalizeCurrency expanded
+    - (modified) internal/currency/currency.go - Supported list +5
+    - (modified) internal/web/render.go - currencySym +6
+    - (new) internal/scan/scan_test.go - 40+ test cases
 * Property: N/A
 
 Version v0.6.4 - scan currency map + FX domain
 ----------------------------------------------------------------------------------------------
-A. Author: ZCode
+A. Author: Rifi
 B. Date: 2026-07-21
 C. Changes:
-    - add normalizeCurrency (RM→MYR, ¥→JPY, $→USD, dll)
-    - FX_BASE_URL default: frankfurter.app (deprecated) → frankfurter.dev/v1
-    - order_form currency dropdown: append "(dari scan)" option kalau value gak match
+    - add normalizeCurrency (RM->MYR, yen-sign->JPY, $->USD, etc.)
+    - FX_BASE_URL default: frankfurter.app (deprecated) -> frankfurter.dev/v1
+    - order_form currency dropdown: append "(dari scan)" option when value does not match
 D. DB: N/A
 E. Detail:
-    - Bug: scan struk Malaysia return "RM", dropdown currency kosong
-    - Bug: frankfurter.app 301 deprecated, MYR rate gak ter-fetch
+    - Bug: scanning a Malaysian receipt returned "RM" and the currency dropdown was empty.
+    - Bug: frankfurter.app returns 301 (deprecated) and MYR rates never loaded.
 * Rest endpoint: N/A
 * SQL script: N/A
 * Go
-    - (modified) internal/scan/scan.go — normalizeCurrency baru
-    - (modified) internal/config/config.go — FX_BASE_URL default
-    - (modified) internal/web/render.go — containsStr helper
-    - (modified) internal/web/templates/order_form.html — currency fallback
-* Property: FX_BASE_URL default berubah jadi https://api.frankfurter.dev/v1
+    - (modified) internal/scan/scan.go - new normalizeCurrency function
+    - (modified) internal/config/config.go - FX_BASE_URL default
+    - (modified) internal/web/render.go - containsStr helper
+    - (modified) internal/web/templates/order_form.html - currency fallback
+* Property: FX_BASE_URL default changed to https://api.frankfurter.dev/v1
 
 Version v0.6.3 - fix scan 500 (gob) + panic logger
 ----------------------------------------------------------------------------------------------
-A. Author: ZCode
+A. Author: Rifi
 B. Date: 2026-07-21
 C. Changes:
-    - fix scan struk HTTP 500 ("gob: type not registered for interface: scan.Result")
-    - ganti Recoverer silent → logRecoverer yang log panic + stack trace
+    - fix scan receipt HTTP 500 ("gob: type not registered for interface: scan.Result")
+    - replace silent chi Recoverer with logRecoverer that logs panic + stack trace
 D. DB: N/A
 E. Detail:
-    - scs (session manager) serialize session via encoding/gob.
-    - Saat scan handler simpan scan.Result ke session → gob gak kenal type → panic.
-    - Recoverer lama balas 500 diam-diam tanpa log apapun.
+    - scs (session manager) serializes session data via encoding/gob.
+    - When the scan handler stored scan.Result in the session, gob did not know
+      the type and panicked.
+    - The old Recoverer replied 500 silently without any log entry.
 * Rest endpoint: N/A
 * SQL script: N/A
 * Go
-    - (modified) cmd/titipdong/main.go — gob.Register(scan.Result{})
-    - (modified) internal/web/server.go — logRecoverer middleware
+    - (modified) cmd/titipdong/main.go - gob.Register(scan.Result{})
+    - (modified) internal/web/server.go - logRecoverer middleware
 * Property: N/A
 
 Version v0.6.2 - fix scan 500 (attempt 1, broken build)
 ----------------------------------------------------------------------------------------------
-A. Author: ZCode
+A. Author: Rifi
 B. Date: 2026-07-21
 C. Changes:
-    - (gob.Register — pertama ditambah, tapi duplicate config.Load bikin build gagal)
+    - (gob.Register added here first, but a duplicate config.Load broke the build)
 D. DB: N/A
-E. Detail: BROKEN — lihat v0.6.3 untuk fix yang bener
+E. Detail: BROKEN - see v0.6.3 for the correct fix
 * Status: do not use, superseded by v0.6.3
 
 Version v0.6.1 - log panic + stack trace
 ----------------------------------------------------------------------------------------------
-A. Author: ZCode
+A. Author: Rifi
 B. Date: 2026-07-21
 C. Changes:
-    - ganti chi Recoverer (silent) → logRecoverer (log panic + stack)
+    - replace chi Recoverer (silent) with logRecoverer (logs panic + stack)
 D. DB: N/A
 E. Detail:
-    - Recoverer default balas 500 tanpa log apapun — bikin production bug
-      impossible to debug dari docker logs.
+    - The default Recoverer replied 500 without any log, which made production
+      bugs impossible to debug from docker logs.
 * Go
     - (modified) internal/web/server.go
 * Property: N/A
 
 Version v0.6.0 - anonymous buyer request + custom request + fee model
 ----------------------------------------------------------------------------------------------
-A. Author: ZCode
+A. Author: Rifi
 B. Date: 2026-07-21
 C. Changes:
-    - buyer anonymous request via catalog ("Mau Ini!") — no login required
-    - buyer custom request (barang di luar katalog) → /request
-    - jastiper dashboard request queue dengan badge count
-    - accept request dengan 2 fee model: percent harga atau per-kg
-    - WA notif ke jastiper (saat buyer submit) dan ke buyer (saat accept/reject)
+    - anonymous buyer request via catalog ("Mau Ini!") - no login required
+    - anonymous custom-item request (item not in catalog) -> /request
+    - jastiper request dashboard with pending-count badge
+    - accept request with two fee models: percent of price, or per kilogram
+    - WA notification to jastiper (on submit) and to buyer (on accept/reject)
 D. DB:
-    - migration 0002_buyer_requests: tabel buyer_requests + enum request_status
+    - migration 0002_buyer_requests: buyer_requests table + request_status enum
     - migration 0003_custom_requests: extend buyer_requests (item snapshot columns,
       fee_model enum, fee_percent, fee_per_kg_idr, item_origin, item_est_weight_kg)
 E. Detail:
-    - Tabel buyer_requests support 2 tipe: catalog (catalog_item_id set) atau
-      custom (catalog_item_id NULL, buyer isi sendiri).
-    - Accept handler transactional: create customer + order + mark accepted + set fee.
-    - Fee percent: selling = (harga × fx) × (1 + fee_percent/100)
-    - Fee per_kg: selling = berat_kg × fee_per_kg_idr
+    - The buyer_requests table supports two flavors: catalog (catalog_item_id set)
+      and custom (catalog_item_id NULL, buyer fills item fields).
+    - Accept handler is transactional: create customer + order, mark accepted, set fee.
+    - Fee percent: selling = (price x fx) x (1 + fee_percent/100)
+    - Fee per_kg: selling = weight_kg x fee_per_kg_idr
 * Rest endpoint
-    - (new) GET  /catalog/{id}/request — public form (catalog item)
-    - (new) POST /catalog/{id}/request — submit catalog request
-    - (new) GET  /request — public form (custom item)
-    - (new) POST /request — submit custom request
-    - (new) GET  /catalog/thanks — landing page post-submit
-    - (new) GET  /app/requests — jastiper dashboard
-    - (new) POST /app/requests/{id}/accept — convert ke order+customer
-    - (new) POST /app/requests/{id}/reject — mark rejected
-    - (new) GET  /app/requests/{id}/wa — WA link ke buyer
+    - (new) GET  /catalog/{id}/request - public form (catalog item)
+    - (new) POST /catalog/{id}/request - submit catalog request
+    - (new) GET  /request - public form (custom item)
+    - (new) POST /request - submit custom request
+    - (new) GET  /catalog/thanks - landing page after submit
+    - (new) GET  /app/requests - jastiper dashboard
+    - (new) POST /app/requests/{id}/accept - convert to order+customer
+    - (new) POST /app/requests/{id}/reject - mark rejected
+    - (new) GET  /app/requests/{id}/wa - WA link to buyer
 * SQL script
     - (new) internal/db/migrations/0002_buyer_requests.up.sql
     - (new) internal/db/migrations/0002_buyer_requests.down.sql
@@ -148,14 +151,14 @@ E. Detail:
     - (new) internal/web/handlers_requests.go
     - (new) internal/web/handlers_requests_admin.go
     - (new) internal/web/handlers_custom_request.go
-    - (modified) internal/web/server.go — store + routes
-    - (modified) internal/web/render.go — pendingRequests count
-    - (modified) internal/kyc/kyc.go — PhoneForUser
-    - (modified) internal/whatsapp/whatsapp.go — buyer request messages
-    - (modified) internal/catalog/catalog.go — GetPublic + ErrNotFound
-    - (modified) internal/web/templates/layout.html — bottom nav + badge
+    - (modified) internal/web/server.go - store + routes
+    - (modified) internal/web/render.go - pendingRequests count
+    - (modified) internal/kyc/kyc.go - PhoneForUser
+    - (modified) internal/whatsapp/whatsapp.go - buyer request messages
+    - (modified) internal/catalog/catalog.go - GetPublic + ErrNotFound
+    - (modified) internal/web/templates/layout.html - bottom nav + badge
     - (new) internal/web/templates/custom_request_form.html
-    - (modified) internal/web/templates/catalog_public.html — Mau Ini + link /request
+    - (modified) internal/web/templates/catalog_public.html - "Mau Ini" + link to /request
     - (new) internal/web/templates/request_form.html
     - (new) internal/web/templates/request_thanks.html
     - (new) internal/web/templates/requests_dashboard.html
@@ -164,14 +167,14 @@ E. Detail:
 
 Version v0.5.0 - app version logging
 ----------------------------------------------------------------------------------------------
-A. Author: ZCode
+A. Author: Rifi
 B. Date: 2026-07-21
 C. Changes:
-    - log app version di startup via ldflags
+    - log app version on startup via ldflags
 D. DB: N/A
 E. Detail:
-    - Supaya user bisa verify image yang running via `docker logs titipdong`.
-    - Solve issue "docker restart gak narik image baru" yang silent failure.
+    - Lets the user verify which image is running via `docker logs titipdong`.
+    - Solves the silent failure of "docker restart does not pull a new image".
 * Go
     - (new) internal/version/version.go
     - (modified) cmd/titipdong/main.go
@@ -179,90 +182,91 @@ E. Detail:
     - (modified) APP_VERSION build-arg + ldflags
 * Property: N/A
 * Workflow
-    - (modified) .github/workflows/publish.yml — pass github.ref_name ke APP_VERSION
+    - (modified) .github/workflows/publish.yml - pass github.ref_name as APP_VERSION
 
 Version v0.4.0 - photo picker (Xiaomi/Android camera fix)
 ----------------------------------------------------------------------------------------------
-A. Author: ZCode
+A. Author: Rifi
 B. Date: 2026-07-21
 C. Changes:
-    - fix tombol "Choose File" di Xiaomi 14T pro selalu buka kamera
-    - 2 tombol: "Foto Langsung" (capture=environment) + "Pilih dari Galeri" (no capture)
+    - fix "Choose File" button on Xiaomi 14T pro that always opened the camera
+    - two buttons: "Foto Langsung" (capture=environment) + "Pilih dari Galeri" (no capture)
 D. DB: N/A
 E. Detail:
-    - Atribut `capture="environment"` di <input type=file> bikin Android selalu
-      buka kamera, padahal user mau pilih foto dari galeri.
-    - JS toggle capture attribute sebelum trigger .click() di 1 input yang sama
-      (hindarin bug FormFile saat 2 input dengan name="photo").
+    - The `capture="environment"` attribute on <input type=file> made Android
+      always open the camera, even when the user wanted to pick a photo from
+      the gallery.
+    - JS toggles the capture attribute right before .click() on the same input
+      (avoids the FormFile bug that occurs with two inputs sharing name="photo").
 * Go
     - (new) web/static/photo-picker.js
-    - (modified) internal/web/templates/layout.html — load photo-picker.js
-    - (modified) internal/web/templates/scan.html — 2 tombol picker
-    - (modified) internal/web/templates/order_form.html — foto item
-    - (modified) internal/web/templates/catalog.html — foto catalog
-    - (modified) internal/web/templates/profile.html — foto KTP
+    - (modified) internal/web/templates/layout.html - load photo-picker.js
+    - (modified) internal/web/templates/scan.html - two-button picker
+    - (modified) internal/web/templates/order_form.html - item photo
+    - (modified) internal/web/templates/catalog.html - catalog photo
+    - (modified) internal/web/templates/profile.html - KTP photo
 * Property: N/A
 
 Version v0.3.0 - regression check + gitignore testing docs
 ----------------------------------------------------------------------------------------------
-A. Author: ZCode
+A. Author: Rifi
 B. Date: 2026-07-21
 C. Changes:
-    - hapus SKENARIO_TESTING.md dan HASIL_TESTING_*.md dari repo publik + history
-    - gitignore testing docs (internal QA, bukan publik)
-    - hapus LAN IP dari docker-compose.truenas.yml + history git
+    - remove SKENARIO_TESTING.md and HASIL_TESTING_*.md from public repo + history
+    - gitignore testing docs (internal QA, not public)
+    - remove LAN IP from docker-compose.truenas.yml + git history
 D. DB: N/A
 E. Detail:
-    - file testing internal (skenario + hasil) gitignored, tetap di lokal
+    - Internal testing files (scenario + results) are gitignored; they remain local.
 * Go: N/A
 * Property: N/A
 
 Version v0.2.1 - fix .gitignore exclude cmd/titipdong
 ----------------------------------------------------------------------------------------------
-A. Author: ZCode
+A. Author: Rifi
 B. Date: 2026-07-21
 C. Changes:
-    - fix .gitignore pattern `titipdong` ke `/titipdong` (anchor ke root)
+    - fix .gitignore pattern `titipdong` to `/titipdong` (anchor to repo root)
 D. DB: N/A
 E. Detail:
-    - Pattern tanpa `/` match semua folder bernama `titipdong`, termasuk
-      `cmd/titipdong/` (entry point). CI gak bisa build.
+    - A pattern without a leading `/` matches any folder named `titipdong`,
+      including `cmd/titipdong/` (the entry point). CI could not build.
 * Go
-    - (new) cmd/titipdong/main.go (yang sempat ke-ignore)
+    - (new) cmd/titipdong/main.go (the file that had been ignored)
 
 Version v0.2.0 - fix Go image match go.mod
 ----------------------------------------------------------------------------------------------
-A. Author: ZCode
+A. Author: Rifi
 B. Date: 2026-07-21
 C. Changes:
-    - Dockerfile: golang:1.22-alpine → golang:1.25-alpine
+    - Dockerfile: golang:1.22-alpine -> golang:1.25-alpine
 D. DB: N/A
 E. Detail:
-    - go.mod declare go 1.25.x, image 1.22 too old → `go mod download` gagal
+    - go.mod declares go 1.25.x; image 1.22 was too old, so `go mod download` failed.
 * Dockerfile: (modified)
 
 Version v0.1.0 - initial release
 ----------------------------------------------------------------------------------------------
-A. Author: ZCode
+A. Author: Rifi
 B. Date: 2026-07-20
 C. Changes:
-    - initial implementation TitipDong (jastip business tracker)
+    - initial implementation of TitipDong (jastip business tracker)
 D. DB:
     - migration 0001_init: users, jastiper_applications, customers, trips,
       orders, catalog_items, fx_rates + enum types
 E. Detail:
-    - Mobile-first PWA untuk jastip merchant Indonesia.
+    - Mobile-first PWA for Indonesian jastip merchants.
     - Single Go binary (chi + pgx + scs + HTMX/Alpine/Tailwind).
-    - Roles: Buyer → (KYC) → Jastiper → Admin.
-    - Multi-currency dengan FX live (frankfurter), snapshot per order.
-    - Order pipeline: Dicari → Ketemu → Dibeli → Dibayar → Diantar.
-    - WA deep links untuk update customer.
+    - Roles: Buyer -> (KYC) -> Jastiper -> Admin.
+    - Multi-currency with live FX (frankfurter), rate snapshotted per order.
+    - Order pipeline: Dicari -> Ketemu -> Dibeli -> Dibayar -> Diantar.
+    - WA deep links for customer updates.
     - Trip dashboard + payments + end-of-trip summary.
     - Receipt scan via OpenAI gpt-4o-mini.
-    - Dockerfile multi-stage, docker-compose, GHCR workflow.
+    - Multi-stage Dockerfile, docker-compose, GHCR workflow.
 * SQL script
     - (new) internal/db/migrations/0001_init.up.sql / .down.sql
 * Go
     - initial codebase (auth, catalog, currency, customers, db, kyc, orders,
       scan, trips, version, web, whatsapp)
-* Property: semua env vars (DATABASE_URL, SESSION_SECRET, ADMIN_EMAIL, dst.)
+* Property: all env vars (DATABASE_URL, SESSION_SECRET, ADMIN_EMAIL, etc.)
