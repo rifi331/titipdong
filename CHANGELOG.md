@@ -4,6 +4,39 @@ Each entry follows the standard template (Author / Date / Changes / DB / Detail)
 
 ---
 
+Version v0.6.8 - live selling price preview + copy-message button
+----------------------------------------------------------------------------------------------
+A. Author: Rifi
+B. Date: 2026-07-21
+C. Changes:
+    - show estimated selling price live in the order form (updates as the
+      jastiper types amount / markup / changes currency)
+    - add "Copy Pesan" button to order cards as an alternative to WhatsApp
+      (for buyers on Instagram DM, Telegram, SMS, etc.)
+D. DB: N/A
+E. Detail:
+    - Live preview uses Alpine.js + a new GET /app/orders/fx?currency=XXX
+      endpoint that returns the cached IDR rate as plain text. The form
+      re-fetches the rate whenever the currency dropdown changes, then
+      computes selling = amount x rate x (1 + markup/100) client-side.
+    - "Copy Pesan" fetches the per-order status message from
+      GET /app/orders/{id}/message and copies it to the clipboard via the
+      Clipboard API (with a textarea fallback for HTTP). The jastiper can
+      then paste it into any chat app.
+* Rest endpoint
+    - (new) GET /app/orders/fx?currency=XXX - plain-text IDR rate
+    - (new) GET /app/orders/{id}/message - plain-text status message
+* SQL script: N/A
+* Go
+    - (new) internal/web/handlers_fx.go
+    - (new) internal/web/handlers_message.go
+    - (modified) internal/web/server.go - register the two new routes
+    - (modified) internal/web/templates/order_form.html - Alpine.js live preview
+    - (modified) internal/web/templates/partials/order_card.html - copy button
+    - (modified) internal/web/templates/layout.html - load app.js
+    - (new) web/static/app.js - copyMessage helper
+* Property: N/A
+
 Version v0.6.7 - fix order_form template panic (nil-safe currency access)
 ----------------------------------------------------------------------------------------------
 A. Author: Rifi

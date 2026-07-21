@@ -147,12 +147,14 @@ func (s *Server) Handler() http.Handler {
 			r.Get("/app/orders", s.handleOrdersList)
 			r.Post("/app/orders", s.handleOrderCreate)
 			r.Get("/app/orders/new", s.handleOrderNew)
+			r.Get("/app/orders/fx", s.handleFXRate)
 			r.Get("/app/orders/{id}", s.handleOrderEdit)
 			r.Post("/app/orders/{id}", s.handleOrderUpdate)
 			r.Post("/app/orders/{id}/delete", s.handleOrderDelete)
 			r.Post("/app/orders/{id}/status", s.handleOrderAdvance)
 			r.Post("/app/orders/{id}/paid", s.handleOrderTogglePaid)
 			r.Get("/app/orders/{id}/wa", s.handleOrderWhatsApp)
+			r.Get("/app/orders/{id}/message", s.handleOrderMessage)
 
 			// Receipt scan.
 			r.Get("/app/scan", s.handleScanForm)

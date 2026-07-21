@@ -47,13 +47,54 @@
     </label>
   </div>
 
-  <label class="block">
+  <label class="block"
+    x-data="{amount: '', markup: '{{if $o}}{{fmt2 $o.MarkupPct}}{{else}}20{{end}}', rate: {{if $o}}{{$o.FXRateSnapshot}}{{else}}0{{end}}, selling: 0,
+             calc() {
+               const a = parseFloat((this.amount||'').replace(/[,.]/g,'')) || 0;
+               const m = parseFloat(this.markup) || 0;
+               this.selling = a * this.rate * (1 + m/100);
+             },
+             fmt(v) {
+               const n = Math.round(v);
+               return 'Rp ' + n.toLocaleString('id-ID');
+             }}"
+    x-init="if(!rate) fetch('/app/orders/fx?currency=' + document.querySelector('[name=currency]').value).then(r=>r.text()).then(t=>{rate=parseFloat(t)||0;calc()});
+            $watch('amount',()=>calc()); $watch('markup',()=>calc())">
     <span class="text-sm text-slate-600">Markup (%)</span>
-    <input name="markup_pct" inputmode="decimal"
-      value="{{if $o}}{{fmt2 $o.MarkupPct}}{{else}}20{{end}}"
+    <input name="markup_pct" inputmode="decimal" x-model="markup"
       class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-sky-500">
-    <span class="text-xs text-slate-400">Harga jual otomatis dihitung: modal IDR × (1 + markup%)</span>
+    <span class="text-xs text-slate-400">Harga jual = modal IDR × (1 + markup%)</span>
+    <div x-show="selling > 0" class="mt-2 bg-emerald-50 border border-emerald-200 rounded-lg p-2 text-sm">
+      <div class="text-slate-600">Harga jual estimasi:</div>
+      <div class="font-bold text-emerald-700 text-lg" x-text="fmt(selling)"></div>
+      <div class="text-xs text-slate-400" x-show="rate > 0">Rate: 1 = <span x-text="rate.toFixed(2)"></span> IDR</div>
+    </div>
+    <input type="hidden" name="amount_foreign_watcher" x-model="amount">
   </label>
+
+  <!-- bind amount input ke alpine state via event listener -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const amtInput = document.querySelector('[name=amount_foreign]');
+      const markupLabel = document.querySelector('[name=markup_pct]').closest('[x-data]');
+      if (amtInput && markupLabel && markupLabel._x_dataStack) {
+        amtInput.addEventListener('input', () => {
+          markupLabel._x_dataStack[0].amount = amtInput.value;
+          markupLabel._x_dataStack[0].calc();
+        });
+        markupLabel._x_dataStack[0].amount = amtInput.value;
+      }
+      // refetch rate when currency changes
+      const curSelect = document.querySelector('[name=currency]');
+      if (curSelect && markupLabel) {
+        curSelect.addEventListener('change', async () => {
+          const r = await fetch('/app/orders/fx?currency=' + curSelect.value).then(r=>r.text());
+          markupLabel._x_dataStack[0].rate = parseFloat(r) || 0;
+          markupLabel._x_dataStack[0].calc();
+        });
+      }
+    });
+  </script>
 
   <div class="grid grid-cols-2 gap-2">
     <label>

@@ -43,5 +43,11 @@
     <a href="/app/orders/{{$o.ID}}/wa" class="text-center bg-slate-100 text-slate-500 text-xs py-2 rounded-lg">💬 WA</a>
     {{end}}
   </div>
+  <div class="grid grid-cols-1 gap-2 mt-2">
+    <button type="button" onclick="copyMessage({{$o.ID}}, this)"
+      class="w-full bg-slate-50 border border-slate-200 text-slate-700 text-xs py-2 rounded-lg">
+      📋 Copy Pesan
+    </button>
+  </div>
 </div>
 {{end}}
