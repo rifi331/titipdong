@@ -95,6 +95,7 @@ func (s *Server) handleOrderCreate(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	s.sessions.Put(r.Context(), "flash", "✅ Order \""+created.ItemName+"\" berhasil dibuat!")
 	http.Redirect(w, r, "/app/orders/"+itoa(created.ID), http.StatusSeeOther)
 }
 
@@ -107,10 +108,12 @@ func (s *Server) handleOrderEdit(w http.ResponseWriter, r *http.Request) {
 	}
 	custs, _ := s.customers.List(r.Context(), u.ID)
 	trips, _ := s.trips.List(r.Context(), u.ID)
+	flash, _ := s.sessions.Pop(r.Context(), "flash").(string)
 	s.render(w, r, "order_form.html", map[string]any{
 		"order":     o,
 		"customers": custs,
 		"trips":     trips,
+		"flash":     flash,
 	})
 }
 

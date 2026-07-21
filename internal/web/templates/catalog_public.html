@@ -2,7 +2,7 @@
 {{define "content"}}
 <div class="max-w-md mx-auto">
   <h1 class="text-2xl font-bold mb-1">Katalog Jastip 🛒</h1>
-  <p class="text-sm text-slate-600 mb-3">Mau sesuatu? Tap <b>"Mau Ini!"</b> — gak perlu bikin akun, langsung connect ke jastiper via WhatsApp.</p>
+  <p class="text-sm text-slate-600 mb-3">Mau sesuatu? Tap item buat detail, atau <b>"Mau Ini!"</b> buat langsung request.</p>
 
   <a href="/request" class="block mb-4 bg-white border-2 border-dashed border-sky-300 text-sky-700 rounded-xl p-3 text-center text-sm font-medium hover:bg-sky-50">
     ✨ Gak nemu? Request barang custom di sini →
@@ -12,14 +12,14 @@
   <div class="grid grid-cols-1 gap-3">
     {{range .items}}
     <div class="bg-white rounded-xl overflow-hidden shadow-sm border border-slate-100">
-      <div class="flex">
+      <a href="/catalog/{{.ID}}" class="flex hover:bg-slate-50">
         {{if .PhotoPath}}<img src="/uploads/{{.PhotoPath}}" class="w-28 h-28 object-cover shrink-0">{{else}}<div class="w-28 h-28 bg-slate-100 flex items-center justify-center text-3xl shrink-0">🛍️</div>{{end}}
         <div class="p-3 flex-1 min-w-0">
           <div class="font-semibold truncate">{{.Title}}</div>
           {{if .Description}}<div class="text-xs text-slate-500 mt-1 line-clamp-2">{{.Description}}</div>{{end}}
           <div class="text-xs text-slate-500 mt-1">{{.JastiperName}} · {{currencySym .Currency}}{{printf "%.0f" .EstPriceForeign}}</div>
         </div>
-      </div>
+      </a>
       <a href="/catalog/{{.ID}}/request" class="block bg-sky-500 hover:bg-sky-600 text-white text-center text-sm font-semibold py-2.5">
         ✨ Mau Ini!
       </a>

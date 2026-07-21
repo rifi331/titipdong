@@ -12,7 +12,7 @@ import (
 // Buyer picks a jastiper, describes the item (name, origin, est price, est weight).
 func (s *Server) handleCustomRequestForm(w http.ResponseWriter, r *http.Request) {
 	// Optional: pre-select a jastiper via ?jastiper=<id>
-	jastiperID := pathInt64Like(r.URL.Query().Get("jastiper"))
+	selectedJastiper := r.URL.Query().Get("jastiper")
 	jastipers, err := s.listJastipers(r)
 	if err != nil || len(jastipers) == 0 {
 		s.render(w, r, "custom_request_form.html", map[string]any{
@@ -22,22 +22,26 @@ func (s *Server) handleCustomRequestForm(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	s.render(w, r, "custom_request_form.html", map[string]any{
-		"jastipers":       jastipers,
-		"selectedJastiper": jastiperID,
+		"jastipers":        jastipers,
+		"selectedJastiper": selectedJastiper,
 	})
 }
 
 // jastiperRow is a minimal display struct for the jastiper picker.
 type jastiperRow struct {
-	ID, Name, Phone string
+	ID, Name, Phone, UpcomingTrip string
 }
 
 func (s *Server) listJastipers(r *http.Request) ([]jastiperRow, error) {
 	rows, err := s.pool.Query(r.Context(), `
-		SELECT u.id, COALESCE(u.display_name, u.email),
+		SELECT u.id::text, COALESCE(u.display_name, u.email),
 		       COALESCE((SELECT phone FROM jastiper_applications a
 		                 WHERE a.user_id = u.id AND a.status='approved'
-		                 ORDER BY created_at DESC LIMIT 1), '')
+		                 ORDER BY created_at DESC LIMIT 1), ''),
+		       COALESCE((SELECT t.name || ' (' || t.country || ')'
+		                 FROM trips t
+		                 WHERE t.owner_user_id = u.id AND t.status = 'active'
+		                 ORDER BY t.start_date DESC NULLS LAST LIMIT 1), '')
 		FROM users u
 		WHERE u.role = 'jastiper'
 		ORDER BY u.display_name`)
@@ -48,7 +52,7 @@ func (s *Server) listJastipers(r *http.Request) ([]jastiperRow, error) {
 	var out []jastiperRow
 	for rows.Next() {
 		var j jastiperRow
-		if err := rows.Scan(&j.ID, &j.Name, &j.Phone); err != nil {
+		if err := rows.Scan(&j.ID, &j.Name, &j.Phone, &j.UpcomingTrip); err != nil {
 			return nil, err
 		}
 		out = append(out, j)

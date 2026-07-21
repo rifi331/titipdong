@@ -20,7 +20,7 @@
       <select name="jastiper_id" required class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2">
         <option value="">— pilih jastiper —</option>
         {{range .jastipers}}
-        <option value="{{.ID}}" {{if $f}}{{if eq $f.jastiper_id .ID}}selected{{end}}{{else}}{{if eq $.selectedJastiper .ID}}selected{{end}}{{end}}>{{.Name}}</option>
+        <option value="{{.ID}}" {{if $f}}{{if eq $f.jastiper_id .ID}}selected{{end}}{{else}}{{if eq $.selectedJastiper .ID}}selected{{end}}{{end}}>{{.Name}}{{if .UpcomingTrip}} · ✈️ {{.UpcomingTrip}}{{end}}</option>
         {{end}}
       </select>
     </label>

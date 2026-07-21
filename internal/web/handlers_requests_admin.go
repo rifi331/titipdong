@@ -3,6 +3,7 @@ package web
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -161,6 +162,17 @@ func (s *Server) convertRequestToOrder(ctx context.Context, ownerID int64, req r
 	}
 
 	var orderID int64
+	// Build order note from request details so the jastiper sees what the buyer asked for.
+	orderNote := "dari request #" + itoa(req.ID)
+	if req.ItemOrigin != "" {
+		orderNote += "; asal: " + req.ItemOrigin
+	}
+	if req.ItemEstWeightKg > 0 {
+		orderNote += fmt.Sprintf("; berat: %.2f kg", req.ItemEstWeightKg)
+	}
+	if n := strings.TrimSpace(req.BuyerNote); n != "" {
+		orderNote += "; catatan buyer: " + n
+	}
 	err = tx.QueryRow(ctx, `
 		INSERT INTO orders
 		  (owner_user_id, customer_id, item_name, source_store, currency,
@@ -170,7 +182,7 @@ func (s *Server) convertRequestToOrder(ctx context.Context, ownerID int64, req r
 		RETURNING id`,
 		ownerID, customerID, req.ItemTitle, req.ItemCurrency,
 		req.ItemEstPrice, markup, rate, selling,
-		"dari request #"+itoa(req.ID),
+		orderNote,
 	).Scan(&orderID)
 	if err != nil {
 		return 0, 0, err

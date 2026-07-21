@@ -109,6 +109,7 @@ func (s *Server) Handler() http.Handler {
 		r.Post("/signup", s.handleSignupPost)
 		r.Post("/logout", s.handleLogout)
 		r.Get("/catalog", s.handleCatalogPublic)
+		r.Get("/catalog/{id}", s.handleCatalogItemDetail)
 		r.Get("/catalog/{id}/request", s.handleRequestForm)
 		r.Post("/catalog/{id}/request", s.handleRequestSubmit)
 		r.Get("/request", s.handleCustomRequestForm)

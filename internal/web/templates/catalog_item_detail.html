@@ -1,0 +1,31 @@
+{{define "title"}}{{.item.Title}} — TitipDong{{end}}
+{{define "topbar"}}{{end}}
+{{define "bottomnav"}}{{end}}
+{{define "content"}}
+{{$item := .item}}
+<div class="max-w-md mx-auto">
+  <a href="/catalog" class="text-sm text-sky-600">← Katalog</a>
+
+  <div class="bg-white rounded-xl overflow-hidden shadow-sm border border-slate-100 mt-2 mb-4">
+    {{if $item.PhotoPath}}<img src="/uploads/{{$item.PhotoPath}}" class="w-full h-56 object-cover">{{else}}<div class="w-full h-56 bg-slate-100 flex items-center justify-center text-5xl">🛍️</div>{{end}}
+    <div class="p-4">
+      <h1 class="text-xl font-bold">{{$item.Title}}</h1>
+      {{if $item.Description}}<p class="text-sm text-slate-600 mt-2">{{$item.Description}}</p>{{end}}
+      <div class="mt-3 flex items-center justify-between">
+        <div>
+          <div class="text-lg font-bold text-emerald-600">{{currencySym $item.Currency}}{{printf "%.0f" $item.EstPriceForeign}}</div>
+          <div class="text-xs text-slate-500">Jastiper: {{$item.JastiperName}}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <a href="/catalog/{{$item.ID}}/request" class="block w-full bg-sky-500 hover:bg-sky-600 text-white text-center font-semibold py-3 rounded-xl mb-3">
+    ✨ Mau Ini!
+  </a>
+  <a href="/request?jastiper={{printf "%d" $item.JastiperUserID}}" class="block w-full bg-white border border-slate-200 text-slate-700 text-center font-semibold py-3 rounded-xl mb-3">
+    📝 Request Barang Lain ke {{$item.JastiperName}}
+  </a>
+  <a href="/catalog" class="block w-full text-center text-slate-500 text-sm py-2">Lihat katalog lain</a>
+</div>
+{{end}}

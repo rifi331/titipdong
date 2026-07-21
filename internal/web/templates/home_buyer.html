@@ -2,31 +2,44 @@
 {{define "content"}}
 {{$u := .currentUser}}
 <h1 class="text-2xl font-bold mb-1">Halo, {{$u.DisplayName}}! 👋</h1>
-<p class="text-sm text-slate-600 mb-4">Lihat katalog dari para Jastiper, atau ajukan diri jadi Jastiper kalau kamu mau jualan juga.</p>
+<p class="text-sm text-slate-600 mb-4">Mau titip barang dari luar negeri? Browse katalog atau request custom — gak perlu bikin akun, langsung connect ke jastiper via WhatsApp.</p>
 
-<div class="grid grid-cols-2 gap-3 mb-6">
-  <a href="/app/catalog" class="bg-sky-500 text-white rounded-xl p-4 shadow-sm">
-    <div class="text-2xl">🛒</div>
-    <div class="font-semibold mt-1">Lihat Katalog</div>
+<div class="grid grid-cols-1 gap-3 mb-6">
+  <a href="/catalog" class="bg-sky-500 text-white rounded-xl p-4 shadow-sm flex items-center gap-3">
+    <span class="text-3xl">🛒</span>
+    <div>
+      <div class="font-semibold text-lg">Browse Katalog</div>
+      <div class="text-sm text-sky-100">Lihat barang yang di-offer jastiper, tap "Mau Ini!"</div>
+    </div>
   </a>
-  <a href="/app/profile" class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-    <div class="text-2xl">📝</div>
-    <div class="font-semibold mt-1">Jadi Jastiper</div>
+  <a href="/request" class="bg-white border-2 border-dashed border-sky-300 text-sky-700 rounded-xl p-4 shadow-sm flex items-center gap-3 hover:bg-sky-50">
+    <span class="text-3xl">📝</span>
+    <div>
+      <div class="font-semibold text-lg">Request Barang Custom</div>
+      <div class="text-sm text-slate-500">Gak nemu di katalog? Deskripsikan barang yang mau dititip</div>
+    </div>
+  </a>
+  <a href="/app/profile" class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex items-center gap-3">
+    <span class="text-3xl">📝</span>
+    <div>
+      <div class="font-semibold">Jadi Jastiper</div>
+      <div class="text-sm text-slate-500">Mau jualan? Ajukan diri sebagai jastiper</div>
+    </div>
   </a>
 </div>
 
-<h2 class="font-semibold mb-2">Katalog Terbaru</h2>
 {{if .items}}
+<h2 class="font-semibold mb-2">Katalog Terbaru</h2>
 <div class="grid grid-cols-2 gap-3">
   {{range .items}}
-  <a href="/app/catalog" class="bg-white rounded-xl overflow-hidden shadow-sm border border-slate-100">
+  <a href="/catalog/{{.ID}}" class="bg-white rounded-xl overflow-hidden shadow-sm border border-slate-100">
     {{if .PhotoPath}}<img src="/uploads/{{.PhotoPath}}" alt="" class="w-full h-32 object-cover">{{else}}<div class="w-full h-32 bg-slate-100 flex items-center justify-center text-3xl">🛍️</div>{{end}}
     <div class="p-2">
       <div class="font-medium text-sm truncate">{{.Title}}</div>
-      <div class="text-xs text-slate-500">{{currencySym .Currency}}{{printf "%.0f" .EstPriceForeign}}</div>
+      <div class="text-xs text-slate-500">{{.JastiperName}} · {{currencySym .Currency}}{{printf "%.0f" .EstPriceForeign}}</div>
     </div>
   </a>
   {{end}}
 </div>
-{{else}}<p class="text-sm text-slate-500">Belum ada item. Nanti muncul di sini.</p>{{end}}
+{{else}}<p class="text-sm text-slate-500">Belum ada item. Cek lagi nanti!</p>{{end}}
 {{end}}

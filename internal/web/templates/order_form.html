@@ -5,6 +5,12 @@
 <a href="/app/orders" class="text-sm text-sky-600">← Daftar Order</a>
 <h1 class="text-2xl font-bold mt-1 mb-4">{{if $o}}Edit Order{{else}}Order Baru 📝{{end}}</h1>
 
+{{if .flash}}
+<div class="mb-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl p-3 text-sm font-medium">
+  {{.flash}}
+</div>
+{{end}}
+
 {{if $sr}}
 <div class="bg-sky-50 border border-sky-200 text-sky-800 text-sm rounded-xl p-3 mb-3">
   📸 Dari scan struk: <b>{{$sr.Item}}</b> · {{$sr.Store}} · {{currencySym $sr.Currency}}{{printf "%.0f" $sr.Amount}}

@@ -6,15 +6,19 @@
   <div class="text-6xl mb-4">✅</div>
   <h1 class="text-2xl font-bold mb-2">Request Terkirim!</h1>
   <p class="text-slate-600 mb-6">
-    {{if .itemTitle}}<b>{{.itemTitle}}</b> dari {{if .jastiperName}}<b>{{.jastiperName}}</b>{{else}}jastiper{{end}}.{{end}}
+    {{if .itemTitle}}<b>{{.itemTitle}}</b>{{if .jastiperName}} dari <b>{{.jastiperName}}</b>{{end}}.{{end}}
     Kamu akan dihubungi via WhatsApp untuk konfirmasi harga & ketersediaan.
   </p>
 
   {{if .waLink}}
-  <a href="{{.waLink}}" target="_blank" class="inline-block bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-6 py-3 rounded-full">
-    💬 Kabarin Jastiper Sekarang
+  <a href="{{.waLink}}" target="_blank" class="inline-block bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-6 py-3 rounded-full mb-3">
+    💬 Kabarin Jastiper via WA
   </a>
-  <p class="text-xs text-slate-400 mt-2">Tap tombol di atas buat langsung chat WhatsApp jastiper.</p>
+  <br>
+  <button type="button" onclick="copyThanksMessage(this)" class="inline-block bg-white border border-slate-300 text-slate-700 font-medium px-6 py-3 rounded-full">
+    📋 Copy Pesan
+  </button>
+  <p class="text-xs text-slate-400 mt-2">Tap "Copy Pesan" lalu paste di Instagram DM, Telegram, atau chat app mana pun.</p>
   {{else}}
   <p class="text-sm text-amber-700 bg-amber-50 rounded-lg p-3">
     Jastiper belum set nomor WhatsApp. Tunggu dia yang hubungi kamu ya.
@@ -25,4 +29,32 @@
     <a href="/catalog" class="text-sky-600 underline text-sm">← Lihat katalog lain</a>
   </div>
 </div>
+
+<script>
+function copyThanksMessage(btn) {
+  // Extract the message text from the WA link's text parameter, or just use a generic message.
+  var waLink = "{{.waLink}}";
+  var msg = "Halo, aku baru aja kirim request via TitipDong untuk {{if .itemTitle}}{{.itemTitle}}{{else}}barang custom{{end}}. Bisa dibantu konfirmasi? 🙏";
+  // Try to decode from wa.me link if present
+  try {
+    var match = waLink.match(/text=([^&]+)/);
+    if (match) msg = decodeURIComponent(match[1]);
+  } catch(e) {}
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(msg).then(function() {
+      btn.textContent = '✓ Tersalin!';
+      setTimeout(function(){ btn.textContent = '📋 Copy Pesan'; }, 2000);
+    });
+  } else {
+    var ta = document.createElement('textarea');
+    ta.value = msg;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    btn.textContent = '✓ Tersalin!';
+    setTimeout(function(){ btn.textContent = '📋 Copy Pesan'; }, 2000);
+  }
+}
+</script>
 {{end}}
