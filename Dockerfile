@@ -33,13 +33,20 @@ RUN CGO_ENABLED=0 GOOS=linux go build -trimpath \
     -o /out/titipdong ./cmd/titipdong
 
 # ---------- Stage 3: runtime ----------
-FROM gcr.io/distroless/static-debian12:nonroot
+# Use alpine (not distroless) so we can chown the uploads dir to the non-root
+# user. Distroless has no shell, which made /app/uploads unwritable for the
+# nonroot user — photos silently failed to save.
+FROM alpine:3.20
+RUN adduser -D -u 65532 nonroot
 WORKDIR /app
 COPY --from=go /out/titipdong /app/titipdong
 # Templates are embedded at build time, but we also ship static assets that
 # are served from disk (JS, compiled CSS, manifest, icons, service worker).
 COPY web/static /app/web/static
-# uploads volume is mounted at runtime; create the dir so ServeFile has a root.
+# Create the uploads dir owned by nonroot so photos can be written at runtime.
+# The docker volume mounts OVER this path; the ownership here is the fallback
+# for when the volume is empty (first boot).
+RUN mkdir -p /app/uploads && chown -R nonroot:nonroot /app/uploads
 EXPOSE 8080
 USER nonroot:nonroot
 ENTRYPOINT ["/app/titipdong"]
