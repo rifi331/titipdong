@@ -37,6 +37,7 @@ var templateFuncs = template.FuncMap{
 	"firstNonEmpty": firstNonEmptyStr,
 	"containsStr":   containsString,
 	"currencyOf":    currencyOf,
+	"gtZero":        gtZero,
 	"subtract":      subtractFloat,
 	"fmtDate":       fmtDate,
 	"roleLabel":     roleLabel,
@@ -261,6 +262,21 @@ func containsString(slice []string, s string) bool {
 		if v == s {
 			return true
 		}
+	}
+	return false
+}
+
+// gtZero reports whether v > 0, accepting any numeric kind. Works around
+// Go templates' strict typing where `gt .X 0` panics when .X is float64.
+func gtZero(v any) bool {
+	rv := reflect.ValueOf(v)
+	switch rv.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return rv.Int() > 0
+	case reflect.Float32, reflect.Float64:
+		return rv.Float() > 0
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return rv.Uint() > 0
 	}
 	return false
 }

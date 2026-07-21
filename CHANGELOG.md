@@ -4,6 +4,41 @@ Each entry follows the standard template (Author / Date / Changes / DB / Detail)
 
 ---
 
+Version v0.7.2 - fix scan pre-fill, paid-status message, payments nav, markup preview
+----------------------------------------------------------------------------------------------
+A. Author: Rifi
+B. Date: 2026-07-21
+C. Changes:
+    - Bug 1: scan result (item, store, currency, amount) now pre-fills the order form
+    - Bug 2: WA / copy message says "pembayaran diterima" after marking an order paid
+    - Bug 3: bottom nav reappears on /app/payments and /app/summary
+    - Bug 4: selling-price preview updates as the jastiper types markup / amount / rate
+D. DB: N/A
+E. Detail:
+    - Bug 1: scs default cookie store truncated the scanResult payload at the ~4KB
+      cookie limit, so fields beyond item/store were lost. Switch to memstore
+      (server-side, signed-cookie key only) - no size limit.
+    - Bug 2: handleOrderMessage + waLinkForOrder now derive the message status
+      from `paid` flag: if paid and pipeline status != diantar, use "dibayar".
+    - Bug 3: payments.html and summary.html used `{{gt .Outstanding 0}}` which
+      panics on float64 vs int comparison -> template exec error -> page cut off
+      before the bottomnav block rendered. Added `gtZero` helper (reflect-based)
+      that accepts any numeric kind.
+    - Bug 4: moved Alpine.js $watch bindings from `x-init` attribute into the
+      component's `init()` method so they reliably fire on every keystroke.
+* Rest endpoint: N/A
+* SQL script: N/A
+* Go
+    - (modified) internal/web/server.go - memstore session
+    - (modified) internal/web/render.go - gtZero helper
+    - (modified) internal/web/handlers_message.go - paid-aware message status
+    - (modified) internal/web/handlers_orders.go - paid-aware waLinkForOrder
+    - (modified) internal/web/templates/payments.html - gtZero
+    - (modified) internal/web/templates/summary.html - gtZero
+    - (modified) internal/web/templates/order_form.html - x-init="init()"
+    - (modified) web/static/app.js - $watch in init()
+* Property: N/A
+
 Version v0.7.1 - fix order_form template: $cur declared before use
 ----------------------------------------------------------------------------------------------
 A. Author: Rifi

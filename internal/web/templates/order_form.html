@@ -33,8 +33,7 @@
       markup: '{{if $o}}{{fmt2 $o.MarkupPct}}{{else}}20{{end}}',
       currency: '{{$cur}}'
     })"
-    x-init="if(!rate || rate==='0') refreshRate();
-            $watch('amount', calc); $watch('rate', calc); $watch('markup', calc)">
+    x-init="init()">
 
     <div class="grid grid-cols-3 gap-2 mb-3">
       <label class="col-span-1">

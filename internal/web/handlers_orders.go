@@ -209,6 +209,10 @@ func (s *Server) handleOrderWhatsApp(w http.ResponseWriter, r *http.Request) {
 // waLinkForOrder builds the wa.me URL using the order's customer + status.
 // Returns "" if no customer or no WhatsApp number. Owner scoping uses the
 // order's OwnerUserID, consistent with all other customer lookups.
+//
+// When the order is marked paid but the pipeline status hasn't advanced to
+// "dibayar", the message still says "pembayaran diterima" so the jastiper
+// can confirm payment with the buyer regardless of the pipeline step.
 func (s *Server) waLinkForOrder(ctx context.Context, o orders.Order) string {
 	if o.CustomerID == nil {
 		return ""
@@ -217,7 +221,11 @@ func (s *Server) waLinkForOrder(ctx context.Context, o orders.Order) string {
 	if err != nil || cust.WhatsApp == "" {
 		return ""
 	}
-	return whatsapp.ComposeLink(cust.WhatsApp, cust.Name, o.ItemName, o.Status, o.SellingPriceIDR)
+	status := o.Status
+	if o.Paid && status != orders.StatusDiantar {
+		status = orders.StatusDibayar
+	}
+	return whatsapp.ComposeLink(cust.WhatsApp, cust.Name, o.ItemName, status, o.SellingPriceIDR)
 }
 
 // orderFromForm parses form fields (including photo upload) into an Order,

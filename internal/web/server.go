@@ -8,6 +8,7 @@ import (
 	"runtime/debug"
 
 	"github.com/alexedwards/scs/v2"
+	"github.com/alexedwards/scs/v2/memstore"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -43,6 +44,11 @@ type Server struct {
 // New constructs the Server with all stores wired up.
 func New(cfg config.Config, pool *pgxpool.Pool) *Server {
 	sessions := scs.New()
+	// Use the in-memory store instead of the default cookie store so the
+	// session can hold larger values (e.g. scan.Result for the order pre-fill)
+	// without hitting the ~4KB cookie size limit. Sessions are still keyed by
+	// a signed cookie; only the data lives server-side.
+	sessions.Store = memstore.New()
 	sessions.Cookie.HttpOnly = true
 	sessions.Cookie.SameSite = http.SameSiteLaxMode
 	sessions.Cookie.Path = "/"

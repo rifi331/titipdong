@@ -25,7 +25,14 @@ func (s *Server) handleOrderMessage(w http.ResponseWriter, r *http.Request) {
 	if custName == "" {
 		custName = "Kak"
 	}
-	msg := whatsapp.Message(custName, o.ItemName, o.Status, o.SellingPriceIDR)
+	// Effective status for the message: when the jastiper just marked the
+	// order paid, the message should say "payment received" even if the
+	// pipeline status hasn't advanced to dibayar yet.
+	status := o.Status
+	if o.Paid && status != orders.StatusDiantar {
+		status = orders.StatusDibayar
+	}
+	msg := whatsapp.Message(custName, o.ItemName, status, o.SellingPriceIDR)
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	_, _ = w.Write([]byte(msg))
 }

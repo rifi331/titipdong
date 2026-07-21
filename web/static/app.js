@@ -14,7 +14,17 @@ window.orderForm = function (initial) {
     selling: 0,
 
     init() {
-      this.calc();
+      // Set up reactive watchers so the preview updates on every keystroke.
+      this.$watch('amount', () => this.calc());
+      this.$watch('rate', () => this.calc());
+      this.$watch('markup', () => this.calc());
+      this.$watch('currency', () => this.refreshRate());
+      // Fetch rate on new orders (snapshot is 0) and always recalc once.
+      if (!this.rate || this.rate === '0') {
+        this.refreshRate();
+      } else {
+        this.calc();
+      }
     },
 
     calc() {
