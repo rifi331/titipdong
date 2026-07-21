@@ -2,37 +2,34 @@ package orders
 
 import "testing"
 
-func TestNextStatus(t *testing.T) {
-	cases := []struct {
-		in, want Status
-	}{
-		{StatusDicari, StatusKetemu},
-		{StatusKetemu, StatusDibeli},
-		{StatusDibeli, StatusDibayar},
-		{StatusDibayar, StatusDiantar},
-		{StatusDiantar, StatusDiantar}, // final stays
+func TestStatusLabel(t *testing.T) {
+	cases := map[Status]string{
+		StatusPendingConfirmation: "Menunggu Konfirmasi",
+		StatusAccepted:            "Diterima",
+		StatusWaitingForPayment:   "Menunggu Pembayaran",
+		StatusPaid:                "Lunas",
+		StatusDelivery:            "Diantar",
+		StatusFinished:            "Selesai",
 	}
-	for _, c := range cases {
-		if got := NextStatus(c.in); got != c.want {
-			t.Errorf("NextStatus(%v) = %v, want %v", c.in, got, c.want)
+	for st, want := range cases {
+		if got := StatusLabel(st); got != want {
+			t.Errorf("StatusLabel(%v) = %q, want %q", st, got, want)
 		}
 	}
 }
 
-func TestStatusLabel(t *testing.T) {
-	if StatusLabel(StatusKetemu) != "Ketemu" {
-		t.Error("label mismatch")
+func TestIsPaid(t *testing.T) {
+	paid := []Status{StatusPaid, StatusDelivery, StatusFinished}
+	for _, s := range paid {
+		if !IsPaid(s) {
+			t.Errorf("IsPaid(%v) should be true", s)
+		}
 	}
-}
-
-func TestPipeline_Order(t *testing.T) {
-	want := []Status{StatusDicari, StatusKetemu, StatusDibeli, StatusDibayar, StatusDiantar}
-	if len(Pipeline) != len(want) {
-		t.Fatalf("pipeline length = %d, want %d", len(Pipeline), len(want))
-	}
-	for i, s := range Pipeline {
-		if s != want[i] {
-			t.Errorf("pipeline[%d] = %v, want %v", i, s, want[i])
+	notPaid := []Status{StatusPendingConfirmation, StatusAccepted, StatusWaitingForPayment,
+		StatusRejected, StatusBuyerCancelled, StatusSellerCancelled}
+	for _, s := range notPaid {
+		if IsPaid(s) {
+			t.Errorf("IsPaid(%v) should be false", s)
 		}
 	}
 }

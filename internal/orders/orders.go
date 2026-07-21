@@ -1,4 +1,14 @@
-// Package orders persists jastip orders and powers the status pipeline.
+// Package orders persists jastip orders and powers the status lifecycle.
+//
+// Status flow (v2 — single source of truth, no separate `paid` boolean):
+//
+//	pending_confirmation -> accepted -> waiting_for_payment -> paid -> delivery -> finished
+//	             |             |              |               |
+//	         rejected    seller_cancelled  seller_cancelled   (terminal)
+//	                      buyer_cancelled
+//
+// Payment detail (paid_at, payment_method, paid_amount, payment_ref) is filled
+// when status transitions to `paid`, for audit / dispute resolution.
 package orders
 
 import (
@@ -9,20 +19,26 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// Status is an order's stage in the pipeline:
-// dicari -> ketemu -> dibeli -> dibayar -> diantar.
+// Status is an order's stage in the lifecycle.
 type Status string
 
 const (
-	StatusDicari  Status = "dicari"
-	StatusKetemu  Status = "ketemu"
-	StatusDibeli  Status = "dibeli"
-	StatusDibayar Status = "dibayar"
-	StatusDiantar Status = "diantar"
+	StatusPendingConfirmation Status = "pending_confirmation"
+	StatusAccepted            Status = "accepted"
+	StatusRejected            Status = "rejected"
+	StatusBuyerCancelled      Status = "buyer_cancelled"
+	StatusWaitingForPayment   Status = "waiting_for_payment"
+	StatusSellerCancelled     Status = "seller_cancelled"
+	StatusPaid                Status = "paid"
+	StatusDelivery            Status = "delivery"
+	StatusFinished            Status = "finished"
 )
 
-// Pipeline is the canonical, ordered sequence of statuses.
-var Pipeline = []Status{StatusDicari, StatusKetemu, StatusDibeli, StatusDibayar, StatusDiantar}
+// TerminalStatuses are the statuses from which no further action is expected.
+var TerminalStatuses = []Status{StatusFinished, StatusRejected, StatusBuyerCancelled, StatusSellerCancelled}
+
+// PaidStatuses are statuses where payment has been received (revenue counts).
+var PaidStatuses = []Status{StatusPaid, StatusDelivery, StatusFinished}
 
 // Order is a single item a jastiper is sourcing for a customer.
 type Order struct {
@@ -38,14 +54,20 @@ type Order struct {
 	FXRateSnapshot  float64
 	SellingPriceIDR float64
 	Status          Status
-	Paid            bool
 	PhotoPath       string
 	Note            string
 	CreatedAt       time.Time
 
+	// Payment detail — filled when status transitions to `paid`.
+	PaidAt        *time.Time
+	PaymentMethod string
+	PaidAmount    *float64
+	PaymentRef    string
+
 	// Joined fields (optional, filled by queries that JOIN).
 	CustomerName string
 	TripName     string
+	OwnerName    string // jastiper display name (admin views)
 }
 
 // Store wraps the database.
@@ -54,88 +76,98 @@ type Store struct{ pool *pgxpool.Pool }
 // NewStore constructs a Store.
 func NewStore(pool *pgxpool.Pool) *Store { return &Store{pool: pool} }
 
+// orderColumns is the canonical column list for SELECT statements.
+const orderColumns = `
+	o.id, o.owner_user_id, o.customer_id, o.trip_id, o.item_name, o.source_store,
+	o.currency, o.amount_foreign, o.markup_pct, o.fx_rate_snapshot, o.selling_price_idr,
+	o.status::text, o.photo_path, o.note, o.created_at,
+	o.paid_at, o.payment_method, o.paid_amount, o.payment_ref,
+	COALESCE(c.name, ''), COALESCE(t.name, ''), COALESCE(u.display_name, u.email)`
+
+const orderJoins = `
+	FROM orders o
+	LEFT JOIN customers c ON c.id = o.customer_id
+	LEFT JOIN trips t     ON t.id = o.trip_id
+	LEFT JOIN users u     ON u.id = o.owner_user_id`
+
+// scanOrder scans one row into an Order (works for both QueryRow and Rows).
+func scanOrder(row interface {
+	Scan(dest ...any) error
+}) (Order, error) {
+	var o Order
+	var custName, tripName, ownerName string
+	err := row.Scan(&o.ID, &o.OwnerUserID, &o.CustomerID, &o.TripID, &o.ItemName, &o.SourceStore,
+		&o.Currency, &o.AmountForeign, &o.MarkupPct, &o.FXRateSnapshot, &o.SellingPriceIDR,
+		&o.Status, &o.PhotoPath, &o.Note, &o.CreatedAt,
+		&o.PaidAt, &o.PaymentMethod, &o.PaidAmount, &o.PaymentRef,
+		&custName, &tripName, &ownerName)
+	o.CustomerName = custName
+	o.TripName = tripName
+	o.OwnerName = ownerName
+	return o, err
+}
+
 // Create inserts a new order and returns it with id + computed selling price.
 func (s *Store) Create(ctx context.Context, o Order) (Order, error) {
 	if o.Status == "" {
-		o.Status = StatusDicari
+		o.Status = StatusAccepted
 	}
 	var out Order
 	err := s.pool.QueryRow(ctx, `
 		INSERT INTO orders
 		  (owner_user_id, customer_id, trip_id, item_name, source_store, currency,
 		   amount_foreign, markup_pct, fx_rate_snapshot, selling_price_idr,
-		   status, paid, photo_path, note)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::order_status,$12,$13,$14)
+		   status, photo_path, note)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::order_status,$12,$13)
 		RETURNING id, owner_user_id, customer_id, trip_id, item_name, source_store, currency,
 		          amount_foreign, markup_pct, fx_rate_snapshot, selling_price_idr,
-		          status::text, paid, photo_path, note, created_at`,
+		          status::text, photo_path, note, created_at,
+		          paid_at, payment_method, paid_amount, payment_ref`,
 		o.OwnerUserID, o.CustomerID, o.TripID, o.ItemName, o.SourceStore, o.Currency,
 		o.AmountForeign, o.MarkupPct, o.FXRateSnapshot, o.SellingPriceIDR,
-		string(o.Status), o.Paid, o.PhotoPath, o.Note).
+		string(o.Status), o.PhotoPath, o.Note).
 		Scan(&out.ID, &out.OwnerUserID, &out.CustomerID, &out.TripID, &out.ItemName, &out.SourceStore, &out.Currency,
 			&out.AmountForeign, &out.MarkupPct, &out.FXRateSnapshot, &out.SellingPriceIDR,
-			&out.Status, &out.Paid, &out.PhotoPath, &out.Note, &out.CreatedAt)
+			&out.Status, &out.PhotoPath, &out.Note, &out.CreatedAt,
+			&out.PaidAt, &out.PaymentMethod, &out.PaidAmount, &out.PaymentRef)
 	return out, err
 }
 
-// Get returns one order with customer/trip names if available.
+// Get returns one order with customer/trip/owner names if available.
 func (s *Store) Get(ctx context.Context, ownerID, id int64) (Order, error) {
-	var o Order
-	var custName, tripName *string
-	err := s.pool.QueryRow(ctx, `
-		SELECT o.id, o.owner_user_id, o.customer_id, o.trip_id, o.item_name, o.source_store, o.currency,
-		       o.amount_foreign, o.markup_pct, o.fx_rate_snapshot, o.selling_price_idr,
-		       o.status::text, o.paid, o.photo_path, o.note, o.created_at,
-		       c.name, t.name
-		FROM orders o
-		LEFT JOIN customers c ON c.id = o.customer_id
-		LEFT JOIN trips t     ON t.id = o.trip_id
-		WHERE o.id=$1 AND o.owner_user_id=$2`, id, ownerID).
-		Scan(&o.ID, &o.OwnerUserID, &o.CustomerID, &o.TripID, &o.ItemName, &o.SourceStore, &o.Currency,
-			&o.AmountForeign, &o.MarkupPct, &o.FXRateSnapshot, &o.SellingPriceIDR,
-			&o.Status, &o.Paid, &o.PhotoPath, &o.Note, &o.CreatedAt,
-			&custName, &tripName)
-	if err != nil {
-		return Order{}, err
-	}
-	if custName != nil {
-		o.CustomerName = *custName
-	}
-	if tripName != nil {
-		o.TripName = *tripName
-	}
-	return o, nil
+	row := s.pool.QueryRow(ctx, `SELECT `+orderColumns+orderJoins+` WHERE o.id=$1 AND o.owner_user_id=$2`, id, ownerID)
+	o, err := scanOrder(row)
+	return o, err
+}
+
+// GetByID returns one order by id only (admin scope — no owner filter).
+func (s *Store) GetByID(ctx context.Context, id int64) (Order, error) {
+	row := s.pool.QueryRow(ctx, `SELECT `+orderColumns+orderJoins+` WHERE o.id=$1`, id)
+	o, err := scanOrder(row)
+	return o, err
 }
 
 // ListFilter controls which orders List returns.
 type ListFilter struct {
-	TripID     *int64
-	Status     *Status
-	OnlyUnpaid bool
+	TripID          *int64
+	Status          *Status
+	OnlyOutstanding bool // status = 'waiting_for_payment'
 }
 
 // List returns orders for an owner, optionally filtered.
 func (s *Store) List(ctx context.Context, ownerID int64, f ListFilter) ([]Order, error) {
-	q := `
-		SELECT o.id, o.owner_user_id, o.customer_id, o.trip_id, o.item_name, o.source_store, o.currency,
-		       o.amount_foreign, o.markup_pct, o.fx_rate_snapshot, o.selling_price_idr,
-		       o.status::text, o.paid, o.photo_path, o.note, o.created_at,
-		       c.name, t.name
-		FROM orders o
-		LEFT JOIN customers c ON c.id = o.customer_id
-		LEFT JOIN trips t     ON t.id = o.trip_id
-		WHERE o.owner_user_id = $1`
+	q := `SELECT ` + orderColumns + orderJoins + ` WHERE o.owner_user_id = $1`
 	args := []any{ownerID}
 	if f.TripID != nil {
 		args = append(args, *f.TripID)
-		q += fmtAppend(" AND o.trip_id = $%d", len(args))
+		q += fmt.Sprintf(" AND o.trip_id = $%d", len(args))
 	}
 	if f.Status != nil {
 		args = append(args, string(*f.Status))
-		q += fmtAppend(" AND o.status = $%d::order_status", len(args))
+		q += fmt.Sprintf(" AND o.status = $%d::order_status", len(args))
 	}
-	if f.OnlyUnpaid {
-		q += " AND o.paid = FALSE"
+	if f.OnlyOutstanding {
+		q += " AND o.status = 'waiting_for_payment'"
 	}
 	q += " ORDER BY o.created_at DESC"
 
@@ -146,26 +178,46 @@ func (s *Store) List(ctx context.Context, ownerID int64, f ListFilter) ([]Order,
 	defer rows.Close()
 	var out []Order
 	for rows.Next() {
-		var o Order
-		var custName, tripName *string
-		if err := rows.Scan(&o.ID, &o.OwnerUserID, &o.CustomerID, &o.TripID, &o.ItemName, &o.SourceStore, &o.Currency,
-			&o.AmountForeign, &o.MarkupPct, &o.FXRateSnapshot, &o.SellingPriceIDR,
-			&o.Status, &o.Paid, &o.PhotoPath, &o.Note, &o.CreatedAt,
-			&custName, &tripName); err != nil {
+		o, err := scanOrder(rows)
+		if err != nil {
 			return nil, err
-		}
-		if custName != nil {
-			o.CustomerName = *custName
-		}
-		if tripName != nil {
-			o.TripName = *tripName
 		}
 		out = append(out, o)
 	}
 	return out, rows.Err()
 }
 
-// Update edits an order's editable fields.
+// ListAll returns orders across all jastipers (admin view).
+// Optional filters by status and owner.
+func (s *Store) ListAll(ctx context.Context, status *Status, ownerID *int64) ([]Order, error) {
+	q := `SELECT ` + orderColumns + orderJoins + ` WHERE 1=1`
+	args := []any{}
+	if status != nil {
+		args = append(args, string(*status))
+		q += fmt.Sprintf(" AND o.status = $%d::order_status", len(args))
+	}
+	if ownerID != nil {
+		args = append(args, *ownerID)
+		q += fmt.Sprintf(" AND o.owner_user_id = $%d", len(args))
+	}
+	q += " ORDER BY o.created_at DESC"
+	rows, err := s.pool.Query(ctx, q, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []Order
+	for rows.Next() {
+		o, err := scanOrder(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, o)
+	}
+	return out, rows.Err()
+}
+
+// Update edits an order's editable fields (excludes status + payment detail).
 func (s *Store) Update(ctx context.Context, o Order) error {
 	_, err := s.pool.Exec(ctx, `
 		UPDATE orders SET
@@ -179,7 +231,7 @@ func (s *Store) Update(ctx context.Context, o Order) error {
 	return err
 }
 
-// SetStatus advances an order to the given status.
+// SetStatus changes an order's status. No transition validation (any -> any).
 func (s *Store) SetStatus(ctx context.Context, ownerID, id int64, st Status) error {
 	_, err := s.pool.Exec(ctx,
 		`UPDATE orders SET status=$1::order_status WHERE id=$2 AND owner_user_id=$3`,
@@ -187,10 +239,18 @@ func (s *Store) SetStatus(ctx context.Context, ownerID, id int64, st Status) err
 	return err
 }
 
-// SetPaid flips the paid flag.
-func (s *Store) SetPaid(ctx context.Context, ownerID, id int64, paid bool) error {
-	_, err := s.pool.Exec(ctx,
-		`UPDATE orders SET paid=$1 WHERE id=$2 AND owner_user_id=$3`, paid, id, ownerID)
+// MarkPaid transitions an order to `paid` and records the payment detail.
+// amount defaults to selling_price_idr if 0. method/ref are optional.
+func (s *Store) MarkPaid(ctx context.Context, ownerID, id int64, method, ref string, amount float64) error {
+	_, err := s.pool.Exec(ctx, `
+		UPDATE orders
+		SET status='paid',
+		    paid_at = now(),
+		    payment_method = $1,
+		    payment_ref = $2,
+		    paid_amount = CASE WHEN $3 > 0 THEN $3 ELSE selling_price_idr END
+		WHERE id=$4 AND owner_user_id=$5`,
+		method, ref, amount, id, ownerID)
 	return err
 }
 
@@ -200,81 +260,97 @@ func (s *Store) Delete(ctx context.Context, ownerID, id int64) error {
 	return err
 }
 
-// NextStatus returns the next pipeline step after cur, or cur if already final.
-func NextStatus(cur Status) Status {
-	for i, s := range Pipeline {
-		if s == cur && i+1 < len(Pipeline) {
-			return Pipeline[i+1]
-		}
-	}
-	return cur
-}
-
 // StatusLabel is the Bahasa Indonesia human label for a status.
 func StatusLabel(st Status) string {
 	switch st {
-	case StatusDicari:
-		return "Dicari"
-	case StatusKetemu:
-		return "Ketemu"
-	case StatusDibeli:
-		return "Dibeli"
-	case StatusDibayar:
-		return "Dibayar"
-	case StatusDiantar:
+	case StatusPendingConfirmation:
+		return "Menunggu Konfirmasi"
+	case StatusAccepted:
+		return "Diterima"
+	case StatusRejected:
+		return "Ditolak"
+	case StatusBuyerCancelled:
+		return "Dibatalkan Buyer"
+	case StatusWaitingForPayment:
+		return "Menunggu Pembayaran"
+	case StatusSellerCancelled:
+		return "Dibatalkan Jastiper"
+	case StatusPaid:
+		return "Lunas"
+	case StatusDelivery:
 		return "Diantar"
+	case StatusFinished:
+		return "Selesai"
 	}
 	return string(st)
 }
 
-// StatusEmoji gives a quick at-a-glance glyph for the pipeline.
+// StatusEmoji gives a quick at-a-glance glyph for a status.
 func StatusEmoji(st Status) string {
 	switch st {
-	case StatusDicari:
-		return "🔍"
-	case StatusKetemu:
+	case StatusPendingConfirmation:
+		return "⏳"
+	case StatusAccepted:
 		return "✅"
-	case StatusDibeli:
-		return "🛍️"
-	case StatusDibayar:
+	case StatusRejected:
+		return "❌"
+	case StatusBuyerCancelled, StatusSellerCancelled:
+		return "🚫"
+	case StatusWaitingForPayment:
+		return "💵"
+	case StatusPaid:
 		return "💰"
-	case StatusDiantar:
+	case StatusDelivery:
 		return "📦"
+	case StatusFinished:
+		return "🎉"
 	}
 	return ""
 }
 
+// IsPaid reports whether the status counts as paid (revenue realized).
+func IsPaid(st Status) bool {
+	for _, p := range PaidStatuses {
+		if p == st {
+			return true
+		}
+	}
+	return false
+}
+
 // Summary aggregates orders for the trip dashboard / end-of-trip summary.
 type Summary struct {
-	OrderCount     int
-	RevenueIDR     float64 // sum of selling_price_idr
-	CostIDR        float64 // sum of (amount_foreign * fx_rate_snapshot)
-	NetMarginIDR   float64
-	NetMarginPct   float64
-	PaidCount      int
-	UnpaidCount    int
-	OutstandingIDR float64 // unpaid selling price
+	OrderCount       int
+	RevenueIDR       float64 // sum of selling_price_idr for paid statuses
+	CostIDR          float64 // sum of (amount_foreign * fx_rate_snapshot)
+	NetMarginIDR     float64
+	NetMarginPct     float64
+	PaidCount        int
+	OutstandingIDR   float64 // sum of selling_price for waiting_for_payment
+	OutstandingCount int
 }
 
 // Summarize computes totals across a set of orders (optionally trip-scoped).
+// Excludes rejected/cancelled orders from revenue + cost.
 func (s *Store) Summarize(ctx context.Context, ownerID int64, tripID *int64) (Summary, error) {
 	q := `
 		SELECT count(*),
-		       COALESCE(SUM(selling_price_idr),0),
+		       COALESCE(SUM(selling_price_idr) FILTER (WHERE status IN ('paid','delivery','finished')),0),
 		       COALESCE(SUM(amount_foreign * fx_rate_snapshot),0),
-		       count(*) FILTER (WHERE paid),
-		       count(*) FILTER (WHERE NOT paid),
-		       COALESCE(SUM(selling_price_idr) FILTER (WHERE NOT paid),0)
-		FROM orders WHERE owner_user_id=$1`
+		       count(*) FILTER (WHERE status IN ('paid','delivery','finished')),
+		       COALESCE(SUM(selling_price_idr) FILTER (WHERE status='waiting_for_payment'),0),
+		       count(*) FILTER (WHERE status='waiting_for_payment')
+		FROM orders
+		WHERE owner_user_id=$1 AND status NOT IN ('rejected','buyer_cancelled','seller_cancelled')`
 	args := []any{ownerID}
 	if tripID != nil {
 		args = append(args, *tripID)
-		q += fmtAppend(" AND trip_id = $%d", len(args))
+		q += fmt.Sprintf(" AND trip_id = $%d", len(args))
 	}
 	var sum Summary
 	err := s.pool.QueryRow(ctx, q, args...).Scan(
 		&sum.OrderCount, &sum.RevenueIDR, &sum.CostIDR,
-		&sum.PaidCount, &sum.UnpaidCount, &sum.OutstandingIDR)
+		&sum.PaidCount, &sum.OutstandingIDR, &sum.OutstandingCount)
 	if err != nil {
 		return Summary{}, err
 	}
@@ -300,16 +376,16 @@ func (s *Store) BreakdownByCustomer(ctx context.Context, ownerID int64, tripID *
 	q := `
 		SELECT o.customer_id, COALESCE(c.name,'(tanpa customer)'),
 		       count(*) AS order_count,
-		       COALESCE(SUM(o.selling_price_idr),0) AS total_idr,
-		       COALESCE(SUM(o.selling_price_idr) FILTER (WHERE o.paid),0) AS paid_idr,
-		       COALESCE(SUM(o.selling_price_idr) FILTER (WHERE NOT o.paid),0) AS outstanding
+		       COALESCE(SUM(o.selling_price_idr) FILTER (WHERE o.status IN ('paid','delivery','finished')),0) AS paid_idr,
+		       COALESCE(SUM(o.selling_price_idr) FILTER (WHERE o.status='waiting_for_payment'),0) AS outstanding,
+		       COALESCE(SUM(o.selling_price_idr),0) AS total_idr
 		FROM orders o
 		LEFT JOIN customers c ON c.id = o.customer_id
-		WHERE o.owner_user_id=$1`
+		WHERE o.owner_user_id=$1 AND o.status NOT IN ('rejected','buyer_cancelled','seller_cancelled')`
 	args := []any{ownerID}
 	if tripID != nil {
 		args = append(args, *tripID)
-		q += fmtAppend(" AND o.trip_id = $%d", len(args))
+		q += fmt.Sprintf(" AND o.trip_id = $%d", len(args))
 	}
 	q += " GROUP BY o.customer_id, c.name ORDER BY total_idr DESC"
 
@@ -321,7 +397,7 @@ func (s *Store) BreakdownByCustomer(ctx context.Context, ownerID int64, tripID *
 	var out []CustomerBreakdown
 	for rows.Next() {
 		var b CustomerBreakdown
-		if err := rows.Scan(&b.CustomerID, &b.CustomerName, &b.OrderCount, &b.TotalIDR, &b.PaidIDR, &b.Outstanding); err != nil {
+		if err := rows.Scan(&b.CustomerID, &b.CustomerName, &b.OrderCount, &b.PaidIDR, &b.Outstanding, &b.TotalIDR); err != nil {
 			return nil, err
 		}
 		out = append(out, b)
@@ -341,16 +417,17 @@ func (s *Store) TopStores(ctx context.Context, ownerID int64, tripID *int64, lim
 	q := `
 		SELECT COALESCE(NULLIF(source_store,''),'(unknown)') AS source_store,
 		       count(*) AS order_count,
-		       COALESCE(SUM(selling_price_idr),0) AS revenue_idr
-		FROM orders WHERE owner_user_id=$1`
+		       COALESCE(SUM(selling_price_idr) FILTER (WHERE status IN ('paid','delivery','finished')),0) AS revenue_idr
+		FROM orders
+		WHERE owner_user_id=$1 AND status NOT IN ('rejected','buyer_cancelled','seller_cancelled')`
 	args := []any{ownerID}
 	if tripID != nil {
 		args = append(args, *tripID)
-		q += fmtAppend(" AND trip_id = $%d", len(args))
+		q += fmt.Sprintf(" AND trip_id = $%d", len(args))
 	}
 	q += " GROUP BY source_store ORDER BY order_count DESC"
 	if limit > 0 {
-		q += fmtAppend(" LIMIT %d", limit)
+		q += fmt.Sprintf(" LIMIT %d", limit)
 	}
 	rows, err := s.pool.Query(ctx, q, args...)
 	if err != nil {
@@ -366,9 +443,4 @@ func (s *Store) TopStores(ctx context.Context, ownerID int64, tripID *int64, lim
 		out = append(out, c)
 	}
 	return out, rows.Err()
-}
-
-// fmtAppend formats a SQL fragment with positional args (used for optional WHERE/LIMIT).
-func fmtAppend(format string, a ...any) string {
-	return fmt.Sprintf(format, a...)
 }

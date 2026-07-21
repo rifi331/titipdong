@@ -166,7 +166,7 @@ func (s *Server) convertRequestToOrder(ctx context.Context, ownerID int64, req r
 		  (owner_user_id, customer_id, item_name, source_store, currency,
 		   amount_foreign, markup_pct, fx_rate_snapshot, selling_price_idr,
 		   status, note)
-		VALUES ($1, $2, $3, '', $4, $5, $6, $7, $8, 'dicari', $9)
+		VALUES ($1, $2, $3, '', $4, $5, $6, $7, $8, 'accepted', $9)
 		RETURNING id`,
 		ownerID, customerID, req.ItemTitle, req.ItemCurrency,
 		req.ItemEstPrice, markup, rate, selling,

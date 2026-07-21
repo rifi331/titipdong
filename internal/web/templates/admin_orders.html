@@ -1,0 +1,62 @@
+{{define "title"}}Semua Order — Admin{{end}}
+{{define "content"}}
+<h1 class="text-2xl font-bold mb-4">Semua Order 📦</h1>
+
+<div class="bg-white rounded-xl p-3 shadow-sm mb-4">
+  <form method="get" class="flex gap-2 flex-wrap text-xs">
+    <select name="status" class="rounded-lg border border-slate-300 px-2 py-1">
+      <option value="">— semua status —</option>
+      <option value="pending_confirmation" {{if eq .statusFilter "pending_confirmation"}}selected{{end}}>⏳ Menunggu Konfirmasi</option>
+      <option value="accepted" {{if eq .statusFilter "accepted"}}selected{{end}}>✅ Diterima</option>
+      <option value="waiting_for_payment" {{if eq .statusFilter "waiting_for_payment"}}selected{{end}}>💵 Menunggu Bayar</option>
+      <option value="paid" {{if eq .statusFilter "paid"}}selected{{end}}>💰 Lunas</option>
+      <option value="delivery" {{if eq .statusFilter "delivery"}}selected{{end}}>📦 Diantar</option>
+      <option value="finished" {{if eq .statusFilter "finished"}}selected{{end}}>🎉 Selesai</option>
+      <option value="rejected" {{if eq .statusFilter "rejected"}}selected{{end}}>❌ Ditolak</option>
+      <option value="buyer_cancelled" {{if eq .statusFilter "buyer_cancelled"}}selected{{end}}>🚫 Buyer Batal</option>
+      <option value="seller_cancelled" {{if eq .statusFilter "seller_cancelled"}}selected{{end}}>🚫 Jastiper Batal</option>
+    </select>
+    <select name="jastiper" class="rounded-lg border border-slate-300 px-2 py-1">
+      <option value="">— semua jastiper —</option>
+      {{range .jastipers}}
+      <option value="{{.ID}}" {{if eq (printf "%d" .ID) $.jastiperFilter}}selected{{end}}>{{.Name}}</option>
+      {{end}}
+    </select>
+    <button class="bg-sky-500 text-white px-3 py-1 rounded-lg">Filter</button>
+    <a href="/app/admin/orders" class="px-3 py-1 text-slate-500">Reset</a>
+  </form>
+</div>
+
+<div class="bg-white rounded-xl shadow-sm divide-y divide-slate-100">
+  {{range .orders}}
+  {{$o := .}}
+  <div class="p-3">
+    <div class="flex justify-between items-start gap-2">
+      <div class="flex-1 min-w-0">
+        <div class="font-medium truncate">{{$o.ItemName}}</div>
+        <div class="text-xs text-slate-500 truncate">
+          {{$o.CustomerName}} · {{$o.OwnerName}}
+          {{if $o.PaymentMethod}}· 💳 {{$o.PaymentMethod}}{{if $o.PaymentRef}} ({{$o.PaymentRef}}){{end}}{{end}}
+        </div>
+      </div>
+      <div class="text-right shrink-0">
+        <div class="font-bold text-sm">{{fmtIDR $o.SellingPriceIDR}}</div>
+        <span class="text-[10px] px-1.5 py-0.5 rounded-full
+          {{if eq $o.Status "pending_confirmation"}}bg-amber-100 text-amber-700
+          {{else if eq $o.Status "accepted"}}bg-sky-100 text-sky-700
+          {{else if eq $o.Status "waiting_for_payment"}}bg-orange-100 text-orange-700
+          {{else if eq $o.Status "paid"}}bg-emerald-100 text-emerald-700
+          {{else if eq $o.Status "delivery"}}bg-indigo-100 text-indigo-700
+          {{else if eq $o.Status "finished"}}bg-slate-200 text-slate-700
+          {{else}}bg-rose-100 text-rose-700{{end}}">
+          {{statusLabel $o.Status}}
+        </span>
+      </div>
+    </div>
+    {{if $o.PaidAt}}<div class="text-[10px] text-slate-400 mt-1">Dibayar: {{fmtDate (timeDeref $o.PaidAt)}}</div>{{end}}
+  </div>
+  {{else}}
+  <div class="p-6 text-center text-sm text-slate-500">Belum ada order.</div>
+  {{end}}
+</div>
+{{end}}

@@ -23,8 +23,8 @@ func listFilters(r *http.Request) orders.ListFilter {
 		st := orders.Status(v)
 		f.Status = &st
 	}
-	if r.URL.Query().Get("unpaid") == "1" {
-		f.OnlyUnpaid = true
+	if r.URL.Query().Get("outstanding") == "1" {
+		f.OnlyOutstanding = true
 	}
 	return f
 }
@@ -63,7 +63,6 @@ func (s *Server) handleOrdersList(w http.ResponseWriter, r *http.Request) {
 		"trips":          trips,
 		"filter":         f,
 		"activeTripName": activeTripName,
-		"pipeline":       orders.Pipeline,
 	})
 }
 
@@ -112,7 +111,6 @@ func (s *Server) handleOrderEdit(w http.ResponseWriter, r *http.Request) {
 		"order":     o,
 		"customers": custs,
 		"trips":     trips,
-		"pipeline":  orders.Pipeline,
 	})
 }
 
@@ -138,26 +136,36 @@ func (s *Server) handleOrderDelete(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/app/orders", http.StatusSeeOther)
 }
 
-// handleOrderAdvance moves an order one step forward in the pipeline.
+// handleOrderStatusChange transitions an order to a new status.
+// Replaces the old handleOrderAdvance + handleOrderTogglePaid.
+// Form fields: status (required), and when status=paid:
+// payment_method, payment_ref, paid_amount (all optional).
 // HTMX-friendly: returns the updated order card partial.
-func (s *Server) handleOrderAdvance(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleOrderStatusChange(w http.ResponseWriter, r *http.Request) {
 	u, _ := auth.UserFrom(r)
 	id := pathInt64(r, "id")
-	o, err := s.orders.Get(r.Context(), u.ID, id)
-	if err != nil {
-		http.NotFound(w, r)
+	target := orders.Status(r.FormValue("status"))
+	if !isValidStatus(target) {
+		http.Error(w, "invalid status", http.StatusBadRequest)
 		return
 	}
-	next := orders.NextStatus(o.Status)
-	if next != o.Status {
-		if err := s.orders.SetStatus(r.Context(), u.ID, id, next); err != nil {
+	// Route to MarkPaid if target is 'paid' (records payment detail).
+	if target == orders.StatusPaid {
+		method := strings.TrimSpace(r.FormValue("payment_method"))
+		ref := strings.TrimSpace(r.FormValue("payment_ref"))
+		amount := parseAmount(r.FormValue("paid_amount"))
+		if err := s.orders.MarkPaid(r.Context(), u.ID, id, method, ref, amount); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		o.Status = next
+	} else {
+		if err := s.orders.SetStatus(r.Context(), u.ID, id, target); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 	if r.Header.Get("HX-Request") == "true" {
-		o, _ = s.orders.Get(r.Context(), u.ID, id)
+		o, _ := s.orders.Get(r.Context(), u.ID, id)
 		waLink := s.waLinkForOrder(r.Context(), o)
 		s.renderPartial(w, "order_card.html", map[string]any{"o": o, "waLink": waLink})
 		return
@@ -165,23 +173,15 @@ func (s *Server) handleOrderAdvance(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/app/orders/"+itoa(id), http.StatusSeeOther)
 }
 
-// handleOrderTogglePaid flips the paid flag.
-func (s *Server) handleOrderTogglePaid(w http.ResponseWriter, r *http.Request) {
-	u, _ := auth.UserFrom(r)
-	id := pathInt64(r, "id")
-	o, err := s.orders.Get(r.Context(), u.ID, id)
-	if err != nil {
-		http.NotFound(w, r)
-		return
+// isValidStatus reports whether s is one of the 9 known statuses.
+func isValidStatus(s orders.Status) bool {
+	switch s {
+	case orders.StatusPendingConfirmation, orders.StatusAccepted, orders.StatusRejected,
+		orders.StatusBuyerCancelled, orders.StatusWaitingForPayment, orders.StatusSellerCancelled,
+		orders.StatusPaid, orders.StatusDelivery, orders.StatusFinished:
+		return true
 	}
-	_ = s.orders.SetPaid(r.Context(), u.ID, id, !o.Paid)
-	if r.Header.Get("HX-Request") == "true" {
-		o, _ = s.orders.Get(r.Context(), u.ID, id)
-		waLink := s.waLinkForOrder(r.Context(), o)
-		s.renderPartial(w, "order_card.html", map[string]any{"o": o, "waLink": waLink})
-		return
-	}
-	http.Redirect(w, r, "/app/orders/"+itoa(id), http.StatusSeeOther)
+	return false
 }
 
 // handleOrderWhatsApp redirects to a wa.me deep link for the order.
@@ -203,16 +203,16 @@ func (s *Server) handleOrderWhatsApp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	link := s.waLinkForOrder(r.Context(), o)
+	if link == "" {
+		http.Error(w, "tidak ada pesan WA untuk status ini", http.StatusBadRequest)
+		return
+	}
 	http.Redirect(w, r, link, http.StatusSeeOther)
 }
 
 // waLinkForOrder builds the wa.me URL using the order's customer + status.
-// Returns "" if no customer or no WhatsApp number. Owner scoping uses the
-// order's OwnerUserID, consistent with all other customer lookups.
-//
-// When the order is marked paid but the pipeline status hasn't advanced to
-// "dibayar", the message still says "pembayaran diterima" so the jastiper
-// can confirm payment with the buyer regardless of the pipeline step.
+// Returns "" if no customer, no WhatsApp number, or the status has no
+// customer-facing message (finished, cancelled).
 func (s *Server) waLinkForOrder(ctx context.Context, o orders.Order) string {
 	if o.CustomerID == nil {
 		return ""
@@ -221,11 +221,12 @@ func (s *Server) waLinkForOrder(ctx context.Context, o orders.Order) string {
 	if err != nil || cust.WhatsApp == "" {
 		return ""
 	}
-	status := o.Status
-	if o.Paid && status != orders.StatusDiantar {
-		status = orders.StatusDibayar
+	// Status is the single source of truth now — no paid workaround.
+	msg := whatsapp.Message(cust.Name, o.ItemName, o.Status, o.SellingPriceIDR)
+	if msg == "" {
+		return "" // no message for terminal/cancelled statuses
 	}
-	return whatsapp.ComposeLink(cust.WhatsApp, cust.Name, o.ItemName, status, o.SellingPriceIDR)
+	return whatsapp.ComposeLink(cust.WhatsApp, cust.Name, o.ItemName, o.Status, o.SellingPriceIDR)
 }
 
 // orderFromForm parses form fields (including photo upload) into an Order,

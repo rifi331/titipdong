@@ -55,26 +55,38 @@ func ComposeLink(phone, customerName, item string, st orders.Status, priceIDR fl
 	return fmt.Sprintf("https://wa.me/%s?text=%s", num, url.QueryEscape(msg))
 }
 
-// Message formats the friendly status-update text.
+// Message formats the friendly status-update text for a given lifecycle status.
+// Returns "" for statuses that have no customer message (finished, cancelled).
 func Message(customerName, item string, st orders.Status, priceIDR float64) string {
 	greeting := greetingFor(customerName)
-	label := strings.ToLower(orders.StatusLabel(st))
 	price := ""
 	if priceIDR > 0 {
-		price = ", " + FormatIDR(priceIDR)
+		price = FormatIDR(priceIDR)
 	}
 	switch st {
-	case orders.StatusKetemu:
-		return fmt.Sprintf("Halo %s, %s udah ketemu%s. Konfirmasi ya? 🙏", greeting, item, price)
-	case orders.StatusDibeli:
-		return fmt.Sprintf("Halo %s, %s udah dibeli%s. Tunggu kabar selanjutnya ya ✨", greeting, item, price)
-	case orders.StatusDibayar:
-		return fmt.Sprintf("Halo %s, pembayaran %s diterima%s. Makasih ya! 🙏", greeting, item, price)
-	case orders.StatusDiantar:
-		return fmt.Sprintf("Halo %s, %s lagi diantar ya%s. Sampai ketemu! 📦", greeting, item, price)
-	default:
-		return fmt.Sprintf("Halo %s, update %s: %s%s", greeting, item, label, price)
+	case orders.StatusPendingConfirmation:
+		return fmt.Sprintf("Halo %s, request %s kami terima. Tunggu konfirmasi ya 🙏", greeting, item)
+	case orders.StatusAccepted:
+		return fmt.Sprintf("Halo %s, request %s udah aku terima! Aku kabarin pas udah siap ✨", greeting, item)
+	case orders.StatusRejected:
+		return fmt.Sprintf("Halo %s, maaf ya, request %s lagi gak bisa aku bantu 🙏", greeting, item)
+	case orders.StatusWaitingForPayment:
+		if price != "" {
+			return fmt.Sprintf("Halo %s, %s siap! Total %s. Bayar ya sebelum aku kirim 💳", greeting, item, price)
+		}
+		return fmt.Sprintf("Halo %s, %s siap! Tunggu kabar totalnya ya 💳", greeting, item)
+	case orders.StatusPaid:
+		if price != "" {
+			return fmt.Sprintf("Halo %s, pembayaran %s diterima%s. Makasih ya! 🙏", greeting, item, fmt.Sprintf(" %s", price))
+		}
+		return fmt.Sprintf("Halo %s, pembayaran %s diterima. Makasih ya! 🙏", greeting, item)
+	case orders.StatusDelivery:
+		return fmt.Sprintf("Halo %s, %s lagi diantar ya. Sampai ketemu! 📦", greeting, item)
+	case orders.StatusFinished, orders.StatusBuyerCancelled, orders.StatusSellerCancelled:
+		// No customer-facing message for terminal/cancelled statuses.
+		return ""
 	}
+	return fmt.Sprintf("Halo %s, update %s: %s", greeting, item, orders.StatusLabel(st))
 }
 
 // greetingFor picks a friendly address from a name; falls back to "Kak".

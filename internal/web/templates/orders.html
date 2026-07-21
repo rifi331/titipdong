@@ -7,10 +7,12 @@
 
 <div class="flex gap-2 overflow-x-auto pb-2 mb-3 text-xs">
   <a href="/app/orders" class="whitespace-nowrap px-3 py-1 rounded-full {{if not .filter.Status}}bg-sky-500 text-white{{else}}bg-white border border-slate-200{{end}}">Semua</a>
-  <a href="/app/orders?status=dicari" class="whitespace-nowrap px-3 py-1 rounded-full bg-white border border-slate-200">🔍 Dicari</a>
-  <a href="/app/orders?status=ketemu" class="whitespace-nowrap px-3 py-1 rounded-full bg-white border border-slate-200">✅ Ketemu</a>
-  <a href="/app/orders?status=dibeli" class="whitespace-nowrap px-3 py-1 rounded-full bg-white border border-slate-200">🛍️ Dibeli</a>
-  <a href="/app/orders?unpaid=1" class="whitespace-nowrap px-3 py-1 rounded-full bg-white border border-slate-200">💵 Belum Bayar</a>
+  <a href="/app/orders?status=pending_confirmation" class="whitespace-nowrap px-3 py-1 rounded-full bg-white border border-slate-200">⏳ Menunggu</a>
+  <a href="/app/orders?status=accepted" class="whitespace-nowrap px-3 py-1 rounded-full bg-white border border-slate-200">✅ Diterima</a>
+  <a href="/app/orders?status=waiting_for_payment" class="whitespace-nowrap px-3 py-1 rounded-full bg-white border border-slate-200">💵 Menunggu Bayar</a>
+  <a href="/app/orders?status=paid" class="whitespace-nowrap px-3 py-1 rounded-full bg-white border border-slate-200">💰 Lunas</a>
+  <a href="/app/orders?status=delivery" class="whitespace-nowrap px-3 py-1 rounded-full bg-white border border-slate-200">📦 Diantar</a>
+  <a href="/app/orders?status=finished" class="whitespace-nowrap px-3 py-1 rounded-full bg-white border border-slate-200">🎉 Selesai</a>
 </div>
 
 {{if .orders}}

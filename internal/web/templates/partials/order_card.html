@@ -16,38 +16,81 @@
     </div>
   </div>
 
-  <div class="flex items-center gap-2 mt-2">
-    <span class="text-xs px-2 py-0.5 rounded-full {{if eq $o.Status "diantar"}}bg-emerald-100 text-emerald-700{{else if eq $o.Status "dibayar"}}bg-sky-100 text-sky-700{{else}}bg-amber-100 text-amber-700{{end}}">
+  <div class="flex items-center gap-2 mt-2 flex-wrap">
+    <span class="text-xs px-2 py-0.5 rounded-full
+      {{if eq $o.Status "pending_confirmation"}}bg-amber-100 text-amber-700
+      {{else if eq $o.Status "accepted"}}bg-sky-100 text-sky-700
+      {{else if eq $o.Status "waiting_for_payment"}}bg-orange-100 text-orange-700
+      {{else if eq $o.Status "paid"}}bg-emerald-100 text-emerald-700
+      {{else if eq $o.Status "delivery"}}bg-indigo-100 text-indigo-700
+      {{else if eq $o.Status "finished"}}bg-slate-200 text-slate-700
+      {{else if eq $o.Status "rejected"}}bg-rose-100 text-rose-700
+      {{else}}bg-slate-100 text-slate-600{{end}}">
       {{statusEmoji $o.Status}} {{statusLabel $o.Status}}
     </span>
-    {{if not $o.Paid}}<span class="text-[10px] text-rose-600">● belum bayar</span>{{else}}<span class="text-[10px] text-emerald-600">✓ lunas</span>{{end}}
+    {{if $o.PaymentMethod}}<span class="text-[10px] text-slate-500">💳 {{$o.PaymentMethod}}{{if $o.PaymentRef}} · {{$o.PaymentRef}}{{end}}</span>{{end}}
   </div>
 
-  <div class="grid grid-cols-3 gap-2 mt-3">
-    {{if isFinal $o.Status}}
-    <span class="text-xs text-slate-400 text-center py-2">Selesai 🎉</span>
-    {{else}}
-    <button hx-post="/app/orders/{{$o.ID}}/status" hx-target="#order-{{$o.ID}}" hx-swap="outerHTML"
-      class="bg-sky-500 text-white text-xs py-2 rounded-lg font-semibold">
-      → {{nextLabel $o.Status}}
-    </button>
+  <div class="mt-3 space-y-2">
+    {{if eq $o.Status "pending_confirmation"}}
+    <div class="grid grid-cols-2 gap-2">
+      <form hx-post="/app/orders/{{$o.ID}}/status" hx-target="#order-{{$o.ID}}" hx-swap="outerHTML">
+        <input type="hidden" name="status" value="accepted">
+        <button class="w-full bg-emerald-500 text-white text-xs py-2 rounded-lg font-semibold">✓ Terima</button>
+      </form>
+      <form hx-post="/app/orders/{{$o.ID}}/status" hx-target="#order-{{$o.ID}}" hx-swap="outerHTML">
+        <input type="hidden" name="status" value="rejected">
+        <button class="w-full bg-rose-100 text-rose-700 text-xs py-2 rounded-lg">✗ Tolak</button>
+      </form>
+    </div>
+    {{else if eq $o.Status "accepted"}}
+    <div class="grid grid-cols-2 gap-2">
+      <form hx-post="/app/orders/{{$o.ID}}/status" hx-target="#order-{{$o.ID}}" hx-swap="outerHTML">
+        <input type="hidden" name="status" value="waiting_for_payment">
+        <button class="w-full bg-orange-500 text-white text-xs py-2 rounded-lg font-semibold">💵 Siap Bayar</button>
+      </form>
+      <form hx-post="/app/orders/{{$o.ID}}/status" hx-target="#order-{{$o.ID}}" hx-swap="outerHTML">
+        <input type="hidden" name="status" value="seller_cancelled">
+        <button class="w-full bg-rose-100 text-rose-700 text-xs py-2 rounded-lg">🚫 Batalkan</button>
+      </form>
+    </div>
+    {{else if eq $o.Status "waiting_for_payment"}}
+    <div class="grid grid-cols-2 gap-2">
+      <form hx-post="/app/orders/{{$o.ID}}/status" hx-target="#order-{{$o.ID}}" hx-swap="outerHTML">
+        <input type="hidden" name="status" value="paid">
+        <input type="hidden" name="payment_method" value="">
+        <button class="w-full bg-emerald-500 text-white text-xs py-2 rounded-lg font-semibold">💰 Tandai Lunas</button>
+      </form>
+      <form hx-post="/app/orders/{{$o.ID}}/status" hx-target="#order-{{$o.ID}}" hx-swap="outerHTML">
+        <input type="hidden" name="status" value="seller_cancelled">
+        <button class="w-full bg-rose-100 text-rose-700 text-xs py-2 rounded-lg">🚫 Batalkan</button>
+      </form>
+    </div>
+    {{else if eq $o.Status "paid"}}
+    <div class="grid grid-cols-1 gap-2">
+      <form hx-post="/app/orders/{{$o.ID}}/status" hx-target="#order-{{$o.ID}}" hx-swap="outerHTML">
+        <input type="hidden" name="status" value="delivery">
+        <button class="w-full bg-indigo-500 text-white text-xs py-2 rounded-lg font-semibold">📦 Diantar</button>
+      </form>
+    </div>
+    {{else if eq $o.Status "delivery"}}
+    <div class="grid grid-cols-1 gap-2">
+      <form hx-post="/app/orders/{{$o.ID}}/status" hx-target="#order-{{$o.ID}}" hx-swap="outerHTML">
+        <input type="hidden" name="status" value="finished">
+        <button class="w-full bg-slate-700 text-white text-xs py-2 rounded-lg font-semibold">🎉 Selesai</button>
+      </form>
+    </div>
     {{end}}
-    <form method="post" action="/app/orders/{{$o.ID}}/paid" hx-post="/app/orders/{{$o.ID}}/paid"
-      hx-target="#order-{{$o.ID}}" hx-swap="outerHTML">
-      <button class="w-full {{if $o.Paid}}bg-slate-100 text-slate-600{{else}}bg-emerald-100 text-emerald-700{{end}} text-xs py-2 rounded-lg">
-      {{if $o.Paid}}Buka Bayar{{else}}Tandai Lunas{{end}}</button>
-    </form>
-    {{if $wa}}
-    <a href="{{$wa}}" target="_blank" class="text-center bg-emerald-500 text-white text-xs py-2 rounded-lg font-semibold">💬 WA</a>
-    {{else}}
-    <a href="/app/orders/{{$o.ID}}/wa" class="text-center bg-slate-100 text-slate-500 text-xs py-2 rounded-lg">💬 WA</a>
-    {{end}}
-  </div>
-  <div class="grid grid-cols-1 gap-2 mt-2">
-    <button type="button" onclick="copyMessage({{$o.ID}}, this)"
-      class="w-full bg-slate-50 border border-slate-200 text-slate-700 text-xs py-2 rounded-lg">
-      📋 Copy Pesan
-    </button>
+
+    <div class="grid grid-cols-2 gap-2">
+      {{if $wa}}
+      <a href="{{$wa}}" target="_blank" class="text-center bg-emerald-500 text-white text-xs py-2 rounded-lg font-semibold">💬 WA</a>
+      {{else}}
+      <a href="/app/orders/{{$o.ID}}/wa" class="text-center bg-slate-100 text-slate-400 text-xs py-2 rounded-lg">💬 WA</a>
+      {{end}}
+      <button type="button" onclick="copyMessage({{$o.ID}}, this)"
+        class="bg-slate-50 border border-slate-200 text-slate-700 text-xs py-2 rounded-lg">📋 Copy</button>
+    </div>
   </div>
 </div>
 {{end}}

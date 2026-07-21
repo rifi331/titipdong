@@ -157,8 +157,7 @@ func (s *Server) Handler() http.Handler {
 			r.Get("/app/orders/{id}", s.handleOrderEdit)
 			r.Post("/app/orders/{id}", s.handleOrderUpdate)
 			r.Post("/app/orders/{id}/delete", s.handleOrderDelete)
-			r.Post("/app/orders/{id}/status", s.handleOrderAdvance)
-			r.Post("/app/orders/{id}/paid", s.handleOrderTogglePaid)
+			r.Post("/app/orders/{id}/status", s.handleOrderStatusChange)
 			r.Get("/app/orders/{id}/wa", s.handleOrderWhatsApp)
 			r.Get("/app/orders/{id}/message", s.handleOrderMessage)
 
@@ -190,6 +189,7 @@ func (s *Server) Handler() http.Handler {
 			r.Get("/app/admin/applications", s.handleAdminApplications)
 			r.Post("/app/admin/rates/refresh", s.handleAdminRefreshRates)
 			r.Get("/app/admin/rates", s.handleAdminRates)
+			r.Get("/app/admin/orders", s.handleAdminOrders)
 			r.Post("/app/admin/applications/{id}/approve", s.handleAdminApprove)
 			r.Post("/app/admin/applications/{id}/reject", s.handleAdminReject)
 		})

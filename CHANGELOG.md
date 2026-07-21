@@ -2,6 +2,52 @@
 
 Each entry follows the standard template (Author / Date / Changes / DB / Detail).
 
+Version v0.8.0 - order status v2 redesign + payment detail + admin orders
+----------------------------------------------------------------------------------------------
+A. Author: Rifi
+B. Date: 2026-07-21
+C. Changes:
+    - replace 5-step pipeline + paid boolean with 9-status lifecycle enum
+    - add payment detail columns (paid_at, payment_method, paid_amount, payment_ref)
+    - add admin super-user view of all orders (/app/admin/orders)
+D. DB:
+    - migration 0004_order_status_v2: new order_status enum (9 values),
+      payment detail columns, backfill from old status+paid, drop old enum+paid
+E. Detail:
+    - New status flow: pending_confirmation -> accepted -> waiting_for_payment
+      -> paid -> delivery -> finished, with side exits: rejected,
+      buyer_cancelled, seller_cancelled.
+    - Single source of truth: status column only (no more paid boolean).
+    - MarkPaid sets status=paid + paid_at + payment detail in one UPDATE.
+    - whatsapp.Message rewritten for 9 statuses (finished/cancelled = empty).
+    - Admin can view all orders across jastipers with status/jastiper filters.
+* Rest endpoint
+    - (new) GET /app/admin/orders - all orders, read-only, with filters
+    - (modified) POST /app/orders/{id}/status - now accepts any of 9 statuses,
+      routes to MarkPaid when target=paid
+    - (removed) POST /app/orders/{id}/paid - replaced by status change
+* SQL script
+    - (new) internal/db/migrations/0004_order_status_v2.up.sql / .down.sql
+* Go
+    - (modified) internal/orders/orders.go - full rewrite (9 statuses, MarkPaid,
+      ListAll, Summarize/Breakdown by status, remove Pipeline/NextStatus)
+    - (modified) internal/web/handlers_orders.go - handleOrderStatusChange
+      replaces advance+togglePaid, remove paid workaround in waLinkForOrder
+    - (modified) internal/web/handlers_message.go - remove paid workaround
+    - (new) internal/web/handlers_admin_orders.go - admin orders view
+    - (modified) internal/web/server.go - routes + memstore session
+    - (modified) internal/web/render.go - gtZero, timeDeref, isPaidStatus helpers
+    - (modified) internal/whatsapp/whatsapp.go - Message() for 9 statuses
+    - (modified) internal/web/handlers_requests_admin.go - accept sets 'accepted'
+    - (modified) internal/orders/orders_test.go - updated for new statuses
+    - (modified) internal/whatsapp/whatsapp_test.go - updated for new statuses
+    - (modified) internal/web/templates/partials/order_card.html - status-based actions
+    - (modified) internal/web/templates/orders.html - new filter chips
+    - (new) internal/web/templates/admin_orders.html
+    - (modified) internal/web/templates/home_admin.html - Semua Order tile
+* Property: N/A
+
+---
 ---
 
 Version v0.7.2 - fix scan pre-fill, paid-status message, payments nav, markup preview

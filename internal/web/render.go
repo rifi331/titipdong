@@ -29,15 +29,14 @@ var templateFuncs = template.FuncMap{
 	"fmt2":          fmt2,
 	"statusLabel":   func(s orders.Status) string { return orders.StatusLabel(s) },
 	"statusEmoji":   func(s orders.Status) string { return orders.StatusEmoji(s) },
-	"nextLabel":     func(s orders.Status) string { return orders.StatusLabel(orders.NextStatus(s)) },
-	"isFinal":       func(s orders.Status) bool { return orders.NextStatus(s) == s },
-	"isPaid":        func(p bool) bool { return p },
+	"isPaidStatus":  orders.IsPaid,
 	"deref":         derefInt64,
 	"deref0":        derefInt64Str,
 	"firstNonEmpty": firstNonEmptyStr,
 	"containsStr":   containsString,
 	"currencyOf":    currencyOf,
 	"gtZero":        gtZero,
+	"timeDeref":     timeDeref,
 	"subtract":      subtractFloat,
 	"fmtDate":       fmtDate,
 	"roleLabel":     roleLabel,
@@ -264,6 +263,15 @@ func containsString(slice []string, s string) bool {
 		}
 	}
 	return false
+}
+
+// timeDeref safely dereferences a *time.Time, returning the zero value if nil.
+// Used by templates to render paid_at without panicking on NULL.
+func timeDeref(t *time.Time) time.Time {
+	if t == nil {
+		return time.Time{}
+	}
+	return *t
 }
 
 // gtZero reports whether v > 0, accepting any numeric kind. Works around

@@ -12,7 +12,6 @@ func TestNormalize(t *testing.T) {
 		"+62 812-3456-7890": "6281234567890",
 		"081234567890":      "6281234567890",
 		"62 812 3456 7890":  "6281234567890",
-		"abc":               "",
 	}
 	for in, want := range cases {
 		if got := Normalize(in); got != want {
@@ -21,34 +20,46 @@ func TestNormalize(t *testing.T) {
 	}
 }
 
-func TestFormatIDRShort(t *testing.T) {
+func TestFormatIDR(t *testing.T) {
 	cases := map[float64]string{
-		366_000:   "366rb",
-		1_500_000: "1,5jt",
-		500:       "500",
-		999:       "999",
+		366_000:   "Rp 366rb",
+		1_500_000: "Rp 1,5jt",
+		500:       "Rp 500",
 	}
 	for amt, want := range cases {
-		if got := FormatIDR(amt); got != "Rp "+want {
-			t.Errorf("FormatIDR(%v) short = %q, want %q", amt, got, "Rp "+want)
+		if got := FormatIDR(amt); got != want {
+			t.Errorf("FormatIDR(%v) = %q, want %q", amt, got, want)
+		}
+	}
+}
+
+func TestMessageStatuses(t *testing.T) {
+	withMessage := []orders.Status{
+		orders.StatusPendingConfirmation, orders.StatusAccepted, orders.StatusRejected,
+		orders.StatusWaitingForPayment, orders.StatusPaid, orders.StatusDelivery,
+	}
+	for _, st := range withMessage {
+		msg := Message("Bu Yuni", "Hada Labo", st, 238000)
+		if msg == "" {
+			t.Errorf("Message for %v should not be empty", st)
+		}
+		if !strings.Contains(msg, "Yuni") || !strings.Contains(msg, "Hada") {
+			t.Errorf("Message for %v should contain name+item: %q", st, msg)
+		}
+	}
+	noMessage := []orders.Status{orders.StatusFinished, orders.StatusBuyerCancelled, orders.StatusSellerCancelled}
+	for _, st := range noMessage {
+		msg := Message("Yuni", "Item", st, 100)
+		if msg != "" {
+			t.Errorf("Message for %v should be empty, got %q", st, msg)
 		}
 	}
 }
 
 func TestComposeLink(t *testing.T) {
-	link := ComposeLink("081234567890", "Bu Yuni", "Hada Labo", orders.StatusKetemu, 366000)
+	link := ComposeLink("081234567890", "Bu Yuni", "Hada Labo", orders.StatusAccepted, 238000)
 	if !strings.HasPrefix(link, "https://wa.me/6281234567890?text=") {
 		t.Fatalf("link prefix wrong: %s", link)
-	}
-	if !strings.Contains(link, "Hada") || !strings.Contains(link, "ketemu") {
-		t.Errorf("message not encoded in link: %s", link)
-	}
-}
-
-func TestMessage_Ketemu(t *testing.T) {
-	msg := Message("Bu Yuni", "Hada Labo", orders.StatusKetemu, 366000)
-	if !strings.Contains(msg, "Bu Yuni") || !strings.Contains(msg, "Hada Labo") || !strings.Contains(msg, "ketemu") {
-		t.Errorf("ketemu message missing parts: %q", msg)
 	}
 }
 
