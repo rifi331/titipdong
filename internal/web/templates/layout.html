@@ -46,31 +46,34 @@
   {{block "bottomnav" .}}
   {{if .currentUser}}
   <nav class="fixed bottom-0 inset-x-0 z-30 bg-white border-t border-slate-200 pb-[env(safe-area-inset-bottom)]">
-    <div class="max-w-xl mx-auto grid grid-cols-6 text-xs">
+    <div class="max-w-xl mx-auto flex justify-around text-xs overflow-x-auto">
       {{$role := .currentUser.Role}}
-      <a href="/app" class="flex flex-col items-center py-2 text-slate-600 hover:text-sky-600">
+      <a href="/app" class="flex flex-col items-center py-2 px-2 text-slate-600 hover:text-sky-600 whitespace-nowrap">
         <span class="text-lg">🏠</span><span>Beranda</span>
       </a>
-      <a href="/app/catalog" class="flex flex-col items-center py-2 text-slate-600 hover:text-sky-600">
+      <a href="/app/catalog" class="flex flex-col items-center py-2 px-2 text-slate-600 hover:text-sky-600 whitespace-nowrap">
         <span class="text-lg">🛒</span><span>Katalog</span>
       </a>
       {{if or (eq $role "jastiper") (eq $role "admin")}}
-      <a href="/app/orders" class="flex flex-col items-center py-2 text-slate-600 hover:text-sky-600">
+      <a href="/app/trips" class="flex flex-col items-center py-2 px-2 text-slate-600 hover:text-sky-600 whitespace-nowrap">
+        <span class="text-lg">✈️</span><span>Trip</span>
+      </a>
+      <a href="/app/orders" class="flex flex-col items-center py-2 px-2 text-slate-600 hover:text-sky-600 whitespace-nowrap">
         <span class="text-lg">📦</span><span>Order</span>
       </a>
-      <a href="/app/requests" class="flex flex-col items-center py-2 text-slate-600 hover:text-sky-600 relative">
+      <a href="/app/requests" class="flex flex-col items-center py-2 px-2 text-slate-600 hover:text-sky-600 whitespace-nowrap relative">
         <span class="text-lg">📨</span><span>Request</span>
-        {{if .pendingRequests}}<span class="absolute top-1 right-2 bg-rose-500 text-white text-[10px] rounded-full px-1.5 leading-4">{{.pendingRequests}}</span>{{end}}
+        {{if .pendingRequests}}<span class="absolute top-1 right-0 bg-rose-500 text-white text-[10px] rounded-full px-1.5 leading-4">{{.pendingRequests}}</span>{{end}}
       </a>
-      <a href="/app/customers" class="flex flex-col items-center py-2 text-slate-600 hover:text-sky-600">
+      <a href="/app/customers" class="flex flex-col items-center py-2 px-2 text-slate-600 hover:text-sky-600 whitespace-nowrap">
         <span class="text-lg">👥</span><span>Customer</span>
       </a>
-      <a href="/app/payments" class="flex flex-col items-center py-2 text-slate-600 hover:text-sky-600">
+      <a href="/app/payments" class="flex flex-col items-center py-2 px-2 text-slate-600 hover:text-sky-600 whitespace-nowrap">
         <span class="text-lg">💵</span><span>Bayar</span>
       </a>
       {{end}}
       {{if eq $role "admin"}}
-      <a href="/app/admin/applications" class="flex flex-col items-center py-2 text-slate-600 hover:text-sky-600">
+      <a href="/app/admin/applications" class="flex flex-col items-center py-2 px-2 text-slate-600 hover:text-sky-600 whitespace-nowrap">
         <span class="text-lg">🛡️</span><span>Admin</span>
       </a>
       {{end}}

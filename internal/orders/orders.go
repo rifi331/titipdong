@@ -82,7 +82,7 @@ const orderColumns = `
 	o.currency, o.amount_foreign, o.markup_pct, o.fx_rate_snapshot, o.selling_price_idr,
 	o.status::text, o.photo_path, o.note, o.created_at,
 	o.paid_at, o.payment_method, o.paid_amount, o.payment_ref,
-	COALESCE(c.name, ''), COALESCE(t.name, ''), COALESCE(u.display_name, u.email)`
+	COALESCE(c.name, ''), COALESCE(t.title, ''), COALESCE(u.display_name, u.email)`
 
 const orderJoins = `
 	FROM orders o
